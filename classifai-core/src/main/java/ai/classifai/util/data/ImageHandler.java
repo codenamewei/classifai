@@ -197,7 +197,7 @@ public class ImageHandler {
 
         Integer thumbnailWidth = ImageFileType.getFixedThumbnailWidth();
         Integer thumbnailHeight = ImageFileType.getFixedThumbnailHeight();
-
+      
         if (oriHeight > oriWidth)
         {
             thumbnailWidth =  thumbnailHeight * oriWidth / oriHeight;
