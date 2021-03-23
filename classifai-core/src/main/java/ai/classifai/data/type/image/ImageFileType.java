@@ -44,9 +44,9 @@ public class ImageFileType {
         BASE_64_HEADER = new HashMap();
         BASE_64_HEADER.put("jpg", "data:image/jpeg;base64,");
         BASE_64_HEADER.put("JPG", "data:image/jpeg;base64,");
-        BASE_64_HEADER.put("jpeg", "data:image/png;base64,");
+        BASE_64_HEADER.put("jpeg", "data:image/jpeg;base64,");
         BASE_64_HEADER.put("JPEG", "data:image/jpeg;base64,");
-        BASE_64_HEADER.put("png", "data:image/jpeg;base64,");
+        BASE_64_HEADER.put("png", "data:image/png;base64,");
         BASE_64_HEADER.put("PNG", "data:image/png;base64,");
         BASE_64_HEADER.put("bmp", "data:image/bmp;base64,");
     }
@@ -60,6 +60,8 @@ public class ImageFileType {
     {
         return BASE_64_HEADER;
     }
+
+    public static String getDefaultHeader(){ return (String) BASE_64_HEADER.get("png");}
 
     public static Integer getMaxWidth()
     {

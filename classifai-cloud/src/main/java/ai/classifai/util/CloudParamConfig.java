@@ -8,6 +8,8 @@ import software.amazon.awssdk.regions.Region;
 
 /***
  * Parameters configuration for cloud-based projects
+ *
+ * @author codenamewei
  */
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

@@ -24,7 +24,8 @@ import java.util.*;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class WasabiImageHandler
 {
-    public static String encodeFileToBase64Binary(@NonNull WasabiProject wasabiProject, @NonNull String dataPath)
+
+    public static String getRawBase64Binary(@NonNull WasabiProject wasabiProject, @NonNull String dataPath)
     {
         byte[] bytes = getObject(wasabiProject, dataPath);
 

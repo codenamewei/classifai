@@ -16,6 +16,7 @@
 package ai.classifai.database.annotation;
 
 import ai.classifai.action.parser.ProjectParser;
+import ai.classifai.data.type.image.ImageFileType;
 import ai.classifai.database.VerticleServiceable;
 import ai.classifai.database.portfolio.PortfolioVerticle;
 import ai.classifai.database.versioning.Annotation;
@@ -94,7 +95,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
                             if(loader.isCloud())
                             {
-                                response.put(ParamConfig.getImgSrcParam(), WasabiImageHandler.encodeFileToBase64Binary(loader.getWasabiProject(), dataPath));
+                                String cloudBase64Binary = WasabiImageHandler.getRawBase64Binary(loader.getWasabiProject(), dataPath);
+                                response.put(ParamConfig.getImgSrcParam(), ImageFileType.getDefaultHeader() + cloudBase64Binary);
+
                             }
                             else
                             {
