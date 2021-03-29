@@ -38,6 +38,5 @@ public class ProjectInfraHandler
         }
 
         return infra;
-
     }
 }

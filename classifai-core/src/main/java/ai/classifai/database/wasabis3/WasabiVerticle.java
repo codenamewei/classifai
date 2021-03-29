@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2021 CertifAI Sdn. Bhd.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License, Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package ai.classifai.database.wasabis3;
 
 import ai.classifai.data.type.image.ImageFileType;
@@ -19,17 +34,21 @@ import ai.classifai.util.project.ProjectHandler;
 import ai.classifai.util.project.ProjectInfra;
 import ai.classifai.util.type.database.H2;
 import ai.classifai.util.type.database.RelationalDb;
-import ai.classifai.wasabis3.WasabiProject;
+import ai.classifai.wasabis3.WasabiClientHandler;
+import ai.classifai.wasabis3.WasabiCredential;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import io.vertx.jdbcclient.JDBCPool;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -80,7 +99,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
         {
             log.info("Creating Wasabi S3 project with name: " + projectName);
 
-            WasabiProject wasabiProject = new WasabiProject(request);
+            WasabiCredential wasabiCredential = new WasabiCredential(request);
 
             ProjectLoader loader = ProjectLoader.builder()
                     .projectId(UuidGenerator.generateUuid())
@@ -91,7 +110,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
                     .isProjectStarred(Boolean.FALSE)
                     .isProjectNew(Boolean.TRUE)
                     .projectInfra(ProjectInfra.WASABI_S3)
-                    .wasabiProject(wasabiProject)
+                    .wasabiCredential(wasabiCredential)
                     .projectVersion(new ProjectVersion())
                     .build();
 
@@ -110,7 +129,6 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
 
                             //only save project to portfolio after get all the data
                             saveObjectsInBucket(loader);
-
                         }
                         else
                         {
@@ -131,7 +149,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
     {
         loader.setFileSystemStatus(FileSystemStatus.WINDOW_CLOSE_LOADING_FILES);
 
-        WasabiProject project = loader.getWasabiProject();
+        WasabiCredential project = loader.getWasabiCredential();
 
         ListObjectsV2Request req = ListObjectsV2Request.builder()
                 .bucket(project.getWasabiBucket())
@@ -183,6 +201,38 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
                 .put("user", db.getUser())
                 .put("password", db.getPassword())
                 .put("max_pool_size", 30));
+    }
+
+    public static void configProjectLoaderFromDb(@NonNull ProjectLoader loader)
+    {
+        Tuple params = Tuple.of(loader.getProjectId());
+
+        wasabiTablePool.preparedQuery(WasabiQuery.getRetrieveCredential())
+            .execute(params)
+            .onComplete(credentialsFetch ->
+            {
+                if(credentialsFetch.succeeded())
+                {
+                    RowSet<Row> rowSet = credentialsFetch.result();
+
+                    if(rowSet.size() != 1)
+                    {
+                        log.debug("Wasabi retrieve project should get one row. Current number of rows: " + rowSet.size());
+                    }
+
+                    Row row = rowSet.iterator().next();
+
+                    S3Client s3Client = WasabiClientHandler.buildWasabiS3Client(row.getString(2), row.getString(3), Boolean.TRUE);
+
+                    WasabiCredential wasabiCredential = WasabiCredential.builder()
+                            .cloudId(row.getString(0))
+                            .wasabiS3Client(s3Client)
+                            .wasabiBucket(row.getString(4))
+                            .build();
+
+                    loader.setWasabiCredential(wasabiCredential);
+                }
+            });
     }
 
 

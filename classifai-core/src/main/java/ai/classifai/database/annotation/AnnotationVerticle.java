@@ -95,7 +95,7 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
                             if(loader.isCloud())
                             {
-                                String cloudBase64Binary = WasabiImageHandler.getRawBase64Binary(loader.getWasabiProject(), dataPath);
+                                String cloudBase64Binary = WasabiImageHandler.getRawBase64Binary(loader.getWasabiCredential(), dataPath);
                                 response.put(ParamConfig.getImgSrcParam(), ImageFileType.getDefaultHeader() + cloudBase64Binary);
 
                             }
@@ -588,7 +588,7 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
         if(loader.isCloud())
         {
-            BufferedImage img = WasabiImageHandler.getThumbNail(loader.getWasabiProject(), annotation.getImgPath());
+            BufferedImage img = WasabiImageHandler.getThumbNail(loader.getWasabiCredential(), annotation.getImgPath());
 
             //not checking orientation for on cloud version
             imgData = ImageHandler.getThumbNail(img, false, null);

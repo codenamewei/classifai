@@ -40,21 +40,21 @@ import java.util.Base64;
 public class WasabiImageHandler
 {
 
-    public static String getRawBase64Binary(@NonNull WasabiProject wasabiProject, @NonNull String dataPath)
+    public static String getRawBase64Binary(@NonNull WasabiCredential wasabiCredential, @NonNull String dataPath)
     {
-        byte[] bytes = getObject(wasabiProject, dataPath);
+        byte[] bytes = getObject(wasabiCredential, dataPath);
 
         return Base64.getEncoder().encodeToString(bytes);
     }
 
-    public static BufferedImage getThumbNail(@NonNull WasabiProject wasabiProject, @NonNull String dataPath)
+    public static BufferedImage getThumbNail(@NonNull WasabiCredential wasabiCredential, @NonNull String dataPath)
     {
-        byte[] bytes = getObject(wasabiProject, dataPath);
+        byte[] bytes = getObject(wasabiCredential, dataPath);
 
         return bytesToBufferedImage(bytes);
     }
 
-    private static byte[] getObject(@NonNull WasabiProject project, @NonNull String key)
+    private static byte[] getObject(@NonNull WasabiCredential project, @NonNull String key)
     {
         GetObjectRequest objectRequest = GetObjectRequest.builder()
                 .bucket(project.getWasabiBucket())

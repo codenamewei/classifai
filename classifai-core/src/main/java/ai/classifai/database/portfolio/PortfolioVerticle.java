@@ -26,6 +26,7 @@ import ai.classifai.database.annotation.AnnotationQuery;
 import ai.classifai.database.annotation.AnnotationVerticle;
 import ai.classifai.database.versioning.ProjectVersion;
 import ai.classifai.database.versioning.Version;
+import ai.classifai.database.wasabis3.WasabiVerticle;
 import ai.classifai.loader.CLIProjectInitiator;
 import ai.classifai.loader.LoaderStatus;
 import ai.classifai.loader.NameGenerator;
@@ -40,7 +41,6 @@ import ai.classifai.util.project.ProjectHandler;
 import ai.classifai.util.project.ProjectInfra;
 import ai.classifai.util.project.ProjectInfraHandler;
 import ai.classifai.util.type.AnnotationHandler;
-import ai.classifai.util.type.AnnotationType;
 import ai.classifai.util.type.database.H2;
 import ai.classifai.util.type.database.RelationalDb;
 import io.vertx.core.AbstractVerticle;
@@ -308,8 +308,6 @@ public class PortfolioVerticle extends AbstractVerticle implements VerticleServi
 
                         String projectPath = configContent.getString(ParamConfig.getProjectPathParam());
 
-                        AnnotationType type = AnnotationHandler.getType(configContent.getString(ParamConfig.getAnnotationTypeParam()));
-
                         //export project table relevant
                         JDBCPool client = AnnotationHandler.getJDBCPool(ProjectHandler.getProjectLoader(projectId));
 
@@ -463,10 +461,16 @@ public class PortfolioVerticle extends AbstractVerticle implements VerticleServi
                                     .projectVersion(project)                                                           //project_version
                                     .build();
 
+                                ProjectHandler.loadProjectLoader(loader);
+
+                                if(loader.isCloud())
+                                {
+                                    WasabiVerticle.configProjectLoaderFromDb(loader);
+                                }
+
                                 //load each data points
                                 AnnotationVerticle.configProjectLoaderFromDb(loader);
 
-                                ProjectHandler.loadProjectLoader(loader);
                             }
                         }
                     }

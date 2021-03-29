@@ -20,7 +20,7 @@ import ai.classifai.database.versioning.Annotation;
 import ai.classifai.database.versioning.ProjectVersion;
 import ai.classifai.selector.filesystem.FileSystemStatus;
 import ai.classifai.util.project.ProjectInfra;
-import ai.classifai.wasabis3.WasabiProject;
+import ai.classifai.wasabis3.WasabiCredential;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
@@ -57,7 +57,7 @@ public class ProjectLoader
 
     private ProjectVersion projectVersion;
 
-    @Builder.Default private WasabiProject wasabiProject = null;
+    @Builder.Default private WasabiCredential wasabiCredential = null;
 
     @Builder.Default private List<String> labelList = new ArrayList<>();
 
@@ -289,7 +289,7 @@ public class ProjectLoader
 
     public boolean isCloud()
     {
-        return wasabiProject != null;
+        return !projectInfra.equals(ProjectInfra.ON_PREMISE);
     }
 
 }
