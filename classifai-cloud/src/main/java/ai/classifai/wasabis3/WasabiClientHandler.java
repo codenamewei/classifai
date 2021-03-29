@@ -31,7 +31,7 @@ import java.net.URI;
  */
 public class WasabiClientHandler
 {
-    public static S3Client buildWasabiS3Client(@NonNull String accessKey, @NonNull String secretAccessKey, Boolean isHashed)
+    public static S3Client buildClient(@NonNull String accessKey, @NonNull String secretAccessKey, Boolean isHashed)
     {
 
         String thisAccessKey = accessKey;

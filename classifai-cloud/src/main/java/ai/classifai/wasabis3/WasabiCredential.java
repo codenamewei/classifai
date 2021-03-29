@@ -15,11 +15,8 @@
  */
 package ai.classifai.wasabis3;
 
-import ai.classifai.util.CloudParamConfig;
-import io.vertx.core.json.JsonObject;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.s3.S3Client;
 
@@ -37,18 +34,4 @@ public class WasabiCredential
     private String cloudId;
     private S3Client wasabiS3Client;
     private String wasabiBucket;
-
-    public WasabiCredential(@NonNull JsonObject objectInput)
-    {
-        cloudId = objectInput.getString(CloudParamConfig.getCloudIdParam());
-
-        String accessKey = objectInput.getString(CloudParamConfig.getAccessKeyParam());
-        String secretAccessKey = objectInput.getString(CloudParamConfig.getSecretAccessKeyParam());
-
-        wasabiS3Client = WasabiClientHandler.buildWasabiS3Client(accessKey, secretAccessKey, Boolean.FALSE);
-
-        wasabiBucket = objectInput.getString(CloudParamConfig.getBucketParam());
-    }
-
-
 }

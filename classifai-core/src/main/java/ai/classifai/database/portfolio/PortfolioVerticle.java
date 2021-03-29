@@ -463,10 +463,7 @@ public class PortfolioVerticle extends AbstractVerticle implements VerticleServi
 
                                 ProjectHandler.loadProjectLoader(loader);
 
-                                if(loader.isCloud())
-                                {
-                                    WasabiVerticle.configProjectLoaderFromDb(loader);
-                                }
+                                if(loader.isCloud()) WasabiVerticle.configProjectLoaderFromDb(loader);
 
                                 //load each data points
                                 AnnotationVerticle.configProjectLoaderFromDb(loader);

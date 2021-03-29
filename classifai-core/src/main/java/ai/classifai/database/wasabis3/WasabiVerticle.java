@@ -99,7 +99,14 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
         {
             log.info("Creating Wasabi S3 project with name: " + projectName);
 
-            WasabiCredential wasabiCredential = new WasabiCredential(request);
+            String accessKey = request.getString(CloudParamConfig.getAccessKeyParam());
+            String secretAccessKey = request.getString(CloudParamConfig.getSecretAccessKeyParam());
+
+            WasabiCredential wasabiCredential =  WasabiCredential.builder()
+                    .cloudId(request.getString(CloudParamConfig.getCloudIdParam()))
+                    .wasabiS3Client(WasabiClientHandler.buildClient(accessKey, secretAccessKey, Boolean.FALSE))
+                    .wasabiBucket(request.getString(CloudParamConfig.getBucketParam()))
+                    .build();
 
             ProjectLoader loader = ProjectLoader.builder()
                     .projectId(UuidGenerator.generateUuid())
@@ -222,7 +229,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
 
                     Row row = rowSet.iterator().next();
 
-                    S3Client s3Client = WasabiClientHandler.buildWasabiS3Client(row.getString(2), row.getString(3), Boolean.TRUE);
+                    S3Client s3Client = WasabiClientHandler.buildClient(row.getString(2), row.getString(3), Boolean.TRUE);
 
                     WasabiCredential wasabiCredential = WasabiCredential.builder()
                             .cloudId(row.getString(0))
