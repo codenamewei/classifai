@@ -23,12 +23,12 @@ import ai.classifai.database.versioning.Annotation;
 import ai.classifai.database.versioning.AnnotationVersion;
 import ai.classifai.loader.ProjectLoader;
 import ai.classifai.util.ParamConfig;
-import ai.classifai.util.project.ProjectHandler;
 import ai.classifai.util.collection.ConversionHandler;
 import ai.classifai.util.collection.UuidGenerator;
 import ai.classifai.util.data.FileHandler;
 import ai.classifai.util.data.ImageHandler;
 import ai.classifai.util.message.ReplyHandler;
+import ai.classifai.util.project.ProjectHandler;
 import ai.classifai.util.type.AnnotationHandler;
 import ai.classifai.wasabis3.WasabiImageHandler;
 import io.vertx.core.AbstractVerticle;
@@ -60,7 +60,7 @@ import java.util.Map;
 @Slf4j
 public abstract class AnnotationVerticle extends AbstractVerticle implements VerticleServiceable, AnnotationServiceable
 {
-    @Getter protected static JDBCPool jdbcPool;
+    @Getter protected JDBCPool jdbcPool;
 
     public void retrieveDataPath(Message<JsonObject> message)
     {
@@ -139,7 +139,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
             Tuple params = Tuple.of(projectId, UUID);
 
-            jdbcPool.preparedQuery(AnnotationQuery.getLoadValidProjectUuid())
+            JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
+
+            clientJdbcPool.preparedQuery(AnnotationQuery.getLoadValidProjectUuid())
                     .execute(params)
                     .onComplete(fetch -> {
 
@@ -191,7 +193,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
         loader.getUuidAnnotationDict().put(uuid, annotation);
 
-        jdbcPool.preparedQuery(AnnotationQuery.getCreateData())
+        JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
+
+        clientJdbcPool.preparedQuery(AnnotationQuery.getCreateData())
                 .execute(annotation.getTuple())
                 .onComplete(fetch -> {
 
@@ -223,7 +227,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
         loader.getUuidAnnotationDict().put(uuid, annotation);
 
-        jdbcPool.preparedQuery(AnnotationQuery.getCreateData())
+        JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
+
+        clientJdbcPool.preparedQuery(AnnotationQuery.getCreateData())
                 .execute(annotation.getTuple())
                 .onComplete(fetch -> {
 
@@ -253,7 +259,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
         loader.getUuidAnnotationDict().put(uuid, annotation);
 
-        jdbcPool.preparedQuery(AnnotationQuery.getCreateData())
+        JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
+
+        clientJdbcPool.preparedQuery(AnnotationQuery.getCreateData())
                 .execute(annotation.getTuple())
                 .onComplete(fetch -> {
 
@@ -273,11 +281,11 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
     public static void configProjectLoaderFromDb(@NonNull ProjectLoader loader)
     {
         //export project table relevant
-        JDBCPool client = AnnotationHandler.getJDBCPool(loader.getAnnotationType());
+        JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
 
         Map<String, Annotation> uuidAnnotationDict = loader.getUuidAnnotationDict();
 
-        client.preparedQuery(AnnotationQuery.getExtractProject())
+        clientJdbcPool.preparedQuery(AnnotationQuery.getExtractProject())
                 .execute(Tuple.of(loader.getProjectId()))
                 .onComplete(annotationFetch ->{
 
@@ -344,7 +352,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
         //put annotation in ProjectLoader
         loader.getUuidAnnotationDict().put(uuid, annotation);
 
-        jdbcPool.preparedQuery(AnnotationQuery.getCreateData())
+        JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
+
+        clientJdbcPool.preparedQuery(AnnotationQuery.getCreateData())
                 .execute(annotation.getTuple())
                 .onComplete(fetch -> {
 
@@ -362,7 +372,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
     public static void uploadUuidFromConfigFile(@NonNull Tuple param, @NonNull ProjectLoader loader)
     {
-        jdbcPool.preparedQuery(AnnotationQuery.getCreateData())
+        JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
+
+        clientJdbcPool.preparedQuery(AnnotationQuery.getCreateData())
                 .execute(param)
                 .onComplete(fetch -> {
 
@@ -394,7 +406,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
         Tuple params = Tuple.of(dataChildPath, projectId);
 
-        jdbcPool.preparedQuery(AnnotationQuery.getQueryUuid())
+        JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
+
+        clientJdbcPool.preparedQuery(AnnotationQuery.getQueryUuid())
                 .execute(params)
                 .onComplete(fetch -> {
 
