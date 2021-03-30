@@ -65,7 +65,7 @@ import java.util.List;
 @Slf4j
 public class WasabiVerticle extends AbstractVerticle implements VerticleServiceable
 {
-    @Setter private static JDBCPool wasabiTablePool;
+    private JDBCPool wasabiTablePool;
 
     @Override
     public void onMessage(Message<JsonObject> message)
@@ -88,7 +88,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
         }
     }
 
-    private static void writeWasabiCredential(Message<JsonObject> message)
+    private void writeWasabiCredential(Message<JsonObject> message)
     {
         JsonObject request = message.body();
 
@@ -130,7 +130,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
                         {
                             message.replyAndRequest(ReplyHandler.getOkReply());
 
-                            log.info("Save credential in wasabi table success");
+                            log.debug("Save credential in wasabi table success");
 
                             ProjectHandler.loadProjectLoader(loader);
 
@@ -152,7 +152,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
         }
     }
 
-    private static void saveObjectsInBucket(@NonNull ProjectLoader loader)
+    private void saveObjectsInBucket(@NonNull ProjectLoader loader)
     {
         loader.setFileSystemStatus(FileSystemStatus.WINDOW_CLOSE_LOADING_FILES);
 
@@ -182,7 +182,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
         ImageHandler.saveToProjectTable(loader, dataPaths);
     }
 
-    public static Tuple buildWasabiTuple(@NonNull JsonObject input, @NonNull String projectId)
+    public Tuple buildWasabiTuple(@NonNull JsonObject input, @NonNull String projectId)
     {
         PasswordHash passwordHash = new PasswordHash();
 
@@ -193,10 +193,10 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
         String hashedSecretAccessKey = passwordHash.encrypt(secretAccessKey);
 
         return Tuple.of(input.getString(CloudParamConfig.getCloudIdParam()),         //cloud_id
-                projectId,                                                   //project_id
-                hashedAccessKey,                                             //access_key
-                hashedSecretAccessKey,                                       //secret_access_key
-                input.getString(CloudParamConfig.getBucketParam()));         //bucket
+                projectId,                                                           //project_id
+                hashedAccessKey,                                                     //access_key
+                hashedSecretAccessKey,                                               //secret_access_key
+                input.getString(CloudParamConfig.getBucketParam()));                 //bucket
 
     }
 
@@ -214,7 +214,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
     {
         Tuple params = Tuple.of(loader.getProjectId());
 
-        wasabiTablePool.preparedQuery(WasabiQuery.getRetrieveCredential())
+        WasabiPoolHandler.getJdbcPool().preparedQuery(WasabiQuery.getRetrieveCredential())
             .execute(params)
             .onComplete(credentialsFetch ->
             {
@@ -259,6 +259,8 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
         H2 h2 = DbConfig.getH2();
 
         wasabiTablePool = createJDBCPool(vertx, h2);
+
+        WasabiPoolHandler.setJdbcPool(wasabiTablePool);
 
         wasabiTablePool.getConnection(ar -> {
 
