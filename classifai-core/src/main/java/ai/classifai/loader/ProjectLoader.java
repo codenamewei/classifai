@@ -20,7 +20,6 @@ import ai.classifai.database.versioning.Annotation;
 import ai.classifai.database.versioning.ProjectVersion;
 import ai.classifai.selector.filesystem.FileSystemStatus;
 import ai.classifai.util.project.ProjectInfra;
-import ai.classifai.wasabis3.WasabiCredential;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
@@ -56,8 +55,6 @@ public class ProjectLoader
     private LoaderStatus loaderStatus;
 
     private ProjectVersion projectVersion;
-
-    @Builder.Default private WasabiCredential wasabiCredential = null;
 
     @Builder.Default private List<String> labelList = new ArrayList<>();
 
@@ -187,7 +184,6 @@ public class ProjectLoader
             offloadFileSysNewList2List();
         }
     }
-
 
     public void updateLoadingProgress(Integer currentSize)
     {

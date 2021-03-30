@@ -21,7 +21,9 @@ import ai.classifai.loader.ProjectLoader;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.type.AnnotationHandler;
 import ai.classifai.util.type.AnnotationType;
+import ai.classifai.wasabis3.WasabiCredential;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -51,6 +53,10 @@ public class ProjectHandler {
     //value: Pair<String projectName, Integer annotationType>
     private static Map projectNameSearch;
 
+    //key: projectId
+    //value: WasabiCredential
+    private static Map projectIdWasabiCredential;
+
     @Getter @Setter private static CLIProjectInitiator cliProjectInitiator = null;
 
     static
@@ -58,6 +64,8 @@ public class ProjectHandler {
         projectIDLoaderDict = new HashMap<String, ProjectLoader>();
         projectIDSearch = new HashMap<Pair<String, Integer>, String>();
         projectNameSearch = new HashMap<String, Pair<String, Integer>>();
+
+        projectIdWasabiCredential = new HashMap<String, WasabiCredential>();
     }
 
     public static ProjectLoader getProjectLoader(String projectName, AnnotationType annotationType)
@@ -109,6 +117,16 @@ public class ProjectHandler {
         Pair key = new ImmutablePair(projectName, annotationType);
 
         return getProjectID(key);
+    }
+
+    public static WasabiCredential getWasabiCredential(@NonNull ProjectLoader loader)
+    {
+        return (WasabiCredential) projectIdWasabiCredential.get(loader.getProjectId());
+    }
+
+    public static void loadProjectIdWasabiCredential(@NonNull String projectId, @NonNull WasabiCredential wasabiCredential)
+    {
+        projectIdWasabiCredential.put(projectId, wasabiCredential);
     }
 
     public static void loadProjectLoader(ProjectLoader loader)

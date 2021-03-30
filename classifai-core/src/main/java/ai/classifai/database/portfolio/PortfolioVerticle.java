@@ -26,7 +26,6 @@ import ai.classifai.database.annotation.AnnotationQuery;
 import ai.classifai.database.annotation.AnnotationVerticle;
 import ai.classifai.database.versioning.ProjectVersion;
 import ai.classifai.database.versioning.Version;
-import ai.classifai.database.wasabis3.WasabiVerticle;
 import ai.classifai.loader.CLIProjectInitiator;
 import ai.classifai.loader.LoaderStatus;
 import ai.classifai.loader.NameGenerator;
@@ -444,10 +443,10 @@ public class PortfolioVerticle extends AbstractVerticle implements VerticleServi
                                 project.setCurrentVersion(currentVersion.getVersionUuid());
 
                                 Map uuidDict = ActionOps.getKeyWithArray(row.getString(9));
-                                project.setUuidListDict(uuidDict);                                                      //uuid_project_version
+                                project.setUuidListDict(uuidDict);                                                     //uuid_project_version
 
                                 Map labelDict = ActionOps.getKeyWithArray(row.getString(10));
-                                project.setLabelListDict(labelDict);                                                    //label_project_version
+                                project.setLabelListDict(labelDict);                                                   //label_project_version
 
                                 ProjectLoader loader = ProjectLoader.builder()
                                     .projectId(row.getString(0))                                                   //project_id
@@ -462,8 +461,6 @@ public class PortfolioVerticle extends AbstractVerticle implements VerticleServi
                                     .build();
 
                                 ProjectHandler.loadProjectLoader(loader);
-
-                                if(loader.isCloud()) WasabiVerticle.configProjectLoaderFromDb(loader);
 
                                 //load each data points
                                 AnnotationVerticle.configProjectLoaderFromDb(loader);

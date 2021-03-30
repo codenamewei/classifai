@@ -30,6 +30,7 @@ import ai.classifai.util.data.ImageHandler;
 import ai.classifai.util.message.ReplyHandler;
 import ai.classifai.util.project.ProjectHandler;
 import ai.classifai.util.type.AnnotationHandler;
+import ai.classifai.wasabis3.WasabiCredential;
 import ai.classifai.wasabis3.WasabiImageHandler;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.Message;
@@ -96,7 +97,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
                             if(loader.isCloud())
                             {
-                                String cloudBase64Binary = WasabiImageHandler.getRawBase64Binary(loader.getWasabiCredential(), dataPath);
+                                WasabiCredential wasabiCredential = ProjectHandler.getWasabiCredential(loader);
+
+                                String cloudBase64Binary = WasabiImageHandler.getRawBase64Binary(wasabiCredential, dataPath);
                                 response.put(ParamConfig.getImgSrcParam(), ImageFileType.getDefaultHeader() + cloudBase64Binary);
 
                             }
@@ -591,7 +594,9 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
         if(loader.isCloud())
         {
-            BufferedImage img = WasabiImageHandler.getThumbNail(loader.getWasabiCredential(), annotation.getImgPath());
+            WasabiCredential wasabiCredential = ProjectHandler.getWasabiCredential(loader);
+
+            BufferedImage img = WasabiImageHandler.getThumbNail(wasabiCredential, annotation.getImgPath());
 
             //not checking orientation for on cloud version
             imgData = ImageHandler.getThumbNail(img, false, null);

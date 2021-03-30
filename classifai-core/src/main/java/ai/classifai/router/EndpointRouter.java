@@ -139,7 +139,6 @@ public class EndpointRouter extends AbstractVerticle
 
         router.put("/v2/:annotation_type/wasabi/newproject/:project_name").handler(cloud::createWasabiCloudProject);
 
-
         vertx.createHttpServer()
                 .requestHandler(router)
                 .exceptionHandler(Throwable::printStackTrace)

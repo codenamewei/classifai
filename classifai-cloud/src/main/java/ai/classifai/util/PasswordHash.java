@@ -59,6 +59,10 @@ public class PasswordHash
             SecretKey tmp = factory.generateSecret(spec);
             key = new SecretKeySpec(tmp.getEncoded(), "AES");
             dcipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+
+            dcipher.init(Cipher.ENCRYPT_MODE, key);
+            AlgorithmParameters params = dcipher.getParameters();
+            iv = params.getParameterSpec(IvParameterSpec.class).getIV();
         }
         catch(Exception e)
         {
@@ -70,9 +74,6 @@ public class PasswordHash
     {
         try
         {
-            dcipher.init(Cipher.ENCRYPT_MODE, key);
-            AlgorithmParameters params = dcipher.getParameters();
-            iv = params.getParameterSpec(IvParameterSpec.class).getIV();
             byte[] utf8EncryptedData = dcipher.doFinal(data.getBytes());
             String base64EncryptedData = Base64.getEncoder().encodeToString(utf8EncryptedData);
             return base64EncryptedData;

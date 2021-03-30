@@ -46,7 +46,6 @@ import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
 import lombok.NonNull;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -65,7 +64,7 @@ import java.util.List;
 @Slf4j
 public class WasabiVerticle extends AbstractVerticle implements VerticleServiceable
 {
-    private JDBCPool wasabiTablePool;
+    private static JDBCPool wasabiJdbcPool;
 
     @Override
     public void onMessage(Message<JsonObject> message)
@@ -104,12 +103,16 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
 
             WasabiCredential wasabiCredential =  WasabiCredential.builder()
                     .cloudId(request.getString(CloudParamConfig.getCloudIdParam()))
-                    .wasabiS3Client(WasabiClientHandler.buildClient(accessKey, secretAccessKey, Boolean.FALSE))
+                    .wasabiS3Client(WasabiClientHandler.buildClient(accessKey, secretAccessKey, false))
                     .wasabiBucket(request.getString(CloudParamConfig.getBucketParam()))
                     .build();
 
+            String projectId = UuidGenerator.generateUuid();
+
+            ProjectHandler.loadProjectIdWasabiCredential(projectId, wasabiCredential);
+
             ProjectLoader loader = ProjectLoader.builder()
-                    .projectId(UuidGenerator.generateUuid())
+                    .projectId(projectId)
                     .projectName(projectName)
                     .annotationType(annotationInt)
                     .projectPath("")
@@ -117,13 +120,12 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
                     .isProjectStarred(Boolean.FALSE)
                     .isProjectNew(Boolean.TRUE)
                     .projectInfra(ProjectInfra.WASABI_S3)
-                    .wasabiCredential(wasabiCredential)
                     .projectVersion(new ProjectVersion())
                     .build();
 
-            Tuple wasabiTuple = buildWasabiTuple(request, loader.getProjectId());
+            Tuple wasabiTuple = buildWasabiTuple(request, projectId);
 
-            wasabiTablePool.preparedQuery(WasabiQuery.getWriteCredential())
+            wasabiJdbcPool.preparedQuery(WasabiQuery.getWriteCredential())
                     .execute(wasabiTuple)
                     .onComplete(fetch -> {
                         if(fetch.succeeded())
@@ -156,13 +158,13 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
     {
         loader.setFileSystemStatus(FileSystemStatus.WINDOW_CLOSE_LOADING_FILES);
 
-        WasabiCredential project = loader.getWasabiCredential();
+        WasabiCredential wasabiCredential = ProjectHandler.getWasabiCredential(loader);
 
         ListObjectsV2Request req = ListObjectsV2Request.builder()
-                .bucket(project.getWasabiBucket())
+                .bucket(wasabiCredential.getWasabiBucket())
                 .build();
 
-        ListObjectsV2Iterable response = project.getWasabiS3Client().listObjectsV2Paginator(req);
+        ListObjectsV2Iterable response = wasabiCredential.getWasabiS3Client().listObjectsV2Paginator(req);
 
         List<Object> dataPaths = new ArrayList<>();
 
@@ -210,34 +212,29 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
                 .put("max_pool_size", 30));
     }
 
-    public static void configProjectLoaderFromDb(@NonNull ProjectLoader loader)
+    private static void configWasabiCredentialFromDb()
     {
-        Tuple params = Tuple.of(loader.getProjectId());
-
-        WasabiPoolHandler.getJdbcPool().preparedQuery(WasabiQuery.getRetrieveCredential())
-            .execute(params)
+        wasabiJdbcPool.query(WasabiQuery.getRetrieveCredential())
+            .execute()
             .onComplete(credentialsFetch ->
             {
                 if(credentialsFetch.succeeded())
                 {
                     RowSet<Row> rowSet = credentialsFetch.result();
 
-                    if(rowSet.size() != 1)
+                    for(Row row : rowSet)
                     {
-                        log.debug("Wasabi retrieve project should get one row. Current number of rows: " + rowSet.size());
+                        S3Client s3Client = WasabiClientHandler.buildClient(row.getString(2), row.getString(3), true);
+
+                        WasabiCredential wasabiCredential = WasabiCredential.builder()
+                                .cloudId(row.getString(0))
+                                .wasabiS3Client(s3Client)
+                                .wasabiBucket(row.getString(4))
+                                .build();
+
+                        ProjectHandler.loadProjectIdWasabiCredential(row.getString(1), wasabiCredential);
                     }
 
-                    Row row = rowSet.iterator().next();
-
-                    S3Client s3Client = WasabiClientHandler.buildClient(row.getString(2), row.getString(3), Boolean.TRUE);
-
-                    WasabiCredential wasabiCredential = WasabiCredential.builder()
-                            .cloudId(row.getString(0))
-                            .wasabiS3Client(s3Client)
-                            .wasabiBucket(row.getString(4))
-                            .build();
-
-                    loader.setWasabiCredential(wasabiCredential);
                 }
             });
     }
@@ -246,7 +243,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
     @Override
     public void stop(Promise<Void> promise)
     {
-        wasabiTablePool.close();
+        wasabiJdbcPool.close();
 
         log.info("Wasabi Verticle stopping...");
     }
@@ -258,14 +255,12 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
     {
         H2 h2 = DbConfig.getH2();
 
-        wasabiTablePool = createJDBCPool(vertx, h2);
+        wasabiJdbcPool = createJDBCPool(vertx, h2);
 
-        WasabiPoolHandler.setJdbcPool(wasabiTablePool);
-
-        wasabiTablePool.getConnection(ar -> {
+        wasabiJdbcPool.getConnection(ar -> {
 
             if (ar.succeeded()) {
-                wasabiTablePool.query(WasabiQuery.getCreateTable())
+                wasabiJdbcPool.query(WasabiQuery.getCreateTable())
                         .execute()
                         .onComplete(create -> {
                             if (create.succeeded())
@@ -274,6 +269,8 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
 
                                 //the consumer methods registers an event bus destination handler
                                 vertx.eventBus().consumer(WasabiQuery.getQueue(), this::onMessage);
+
+                                configWasabiCredentialFromDb();
 
                                 promise.complete();
                             }

@@ -27,7 +27,7 @@ public class InternetConnection
 {
     private final static String URL = "http://www.google.com";
 
-    public static boolean isOn()
+    public static boolean isConnected()
     {
         try
         {
