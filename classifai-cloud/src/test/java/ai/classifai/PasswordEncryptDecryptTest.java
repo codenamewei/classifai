@@ -64,5 +64,18 @@ public class PasswordEncryptDecryptTest
         Assertions.assertNotEquals(anotherTestInput, decrypted);
     }
 
+    @Test
+    public void passwordHashEqual()
+    {
+        String testInput = "12345654321";
+
+        String encrypted = new PasswordHash().encrypt(testInput);
+
+        String decrypted = new PasswordHash().decrypt(encrypted);
+
+        //input should be same with decryption of input
+        Assertions.assertEquals(testInput, decrypted);
+    }
+
 
 }
