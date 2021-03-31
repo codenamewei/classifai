@@ -24,7 +24,6 @@ import ai.classifai.loader.ProjectLoader;
 import ai.classifai.selector.filesystem.FileSystemStatus;
 import ai.classifai.util.CloudParamConfig;
 import ai.classifai.util.ParamConfig;
-import ai.classifai.util.PasswordHash;
 import ai.classifai.util.collection.UuidGenerator;
 import ai.classifai.util.data.FileHandler;
 import ai.classifai.util.data.ImageHandler;
@@ -186,18 +185,13 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
 
     public Tuple buildWasabiTuple(@NonNull JsonObject input, @NonNull String projectId)
     {
-        PasswordHash passwordHash = new PasswordHash();
-
-        String accessKey = input.getString(CloudParamConfig.getAccessKeyParam());
-        String hashedAccessKey = passwordHash.encrypt(accessKey);
-
-        String secretAccessKey = input.getString(CloudParamConfig.getSecretAccessKeyParam());
-        String hashedSecretAccessKey = passwordHash.encrypt(secretAccessKey);
+        String encryptedAccessKey = input.getString(CloudParamConfig.getAccessKeyParam());
+        String encryptedSecretAccessKey = input.getString(CloudParamConfig.getSecretAccessKeyParam());
 
         return Tuple.of(input.getString(CloudParamConfig.getCloudIdParam()),         //cloud_id
                 projectId,                                                           //project_id
-                hashedAccessKey,                                                     //access_key
-                hashedSecretAccessKey,                                               //secret_access_key
+                encryptedAccessKey,                                                     //access_key
+                encryptedSecretAccessKey,                                               //secret_access_key
                 input.getString(CloudParamConfig.getBucketParam()));                 //bucket
 
     }

@@ -13,7 +13,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package ai.classifai.util;
+package ai.classifai.util.security;
 
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -30,13 +30,13 @@ import java.util.Base64;
  * @author codenamewei
  */
 @Slf4j
-public class Hash256
+public class FileHashing
 {
-    public static String getHash256String(@NonNull File filePath)
+    public static String hash(@NonNull File filePath)
     {
         try
         {
-            byte[] buffer= new byte[8192];
+            byte[] buffer = new byte[8192];
 
             int count;
 

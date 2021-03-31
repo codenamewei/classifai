@@ -20,8 +20,8 @@ import ai.classifai.database.annotation.AnnotationVerticle;
 import ai.classifai.database.versioning.Annotation;
 import ai.classifai.database.versioning.AnnotationVersion;
 import ai.classifai.loader.ProjectLoader;
-import ai.classifai.util.Hash256;
 import ai.classifai.util.ParamConfig;
+import ai.classifai.util.security.FileHashing;
 import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
@@ -58,7 +58,7 @@ public class ProjectParser
 
             String fullPath = Paths.get(projectPath, imgPath).toString();
 
-            String hash = Hash256.getHash256String(new File(fullPath));
+            String hash = FileHashing.hash(new File(fullPath));
 
             JsonObject annotationJsonObject = new JsonObject()
                     .put(ParamConfig.getCheckSumParam(), hash)
@@ -94,7 +94,7 @@ public class ProjectParser
 
             String fullPath = Paths.get(loader.getProjectPath(), subPath).toString();
 
-            String currentHash = Hash256.getHash256String(new File(fullPath));
+            String currentHash = FileHashing.hash(new File(fullPath));
 
             String fileHash = jsonObject.getString(ParamConfig.getCheckSumParam());
 
