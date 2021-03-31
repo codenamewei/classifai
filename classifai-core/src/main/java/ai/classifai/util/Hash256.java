@@ -30,7 +30,7 @@ import java.util.Base64;
  * @author codenamewei
  */
 @Slf4j
-public class Hash
+public class Hash256
 {
     public static String getHash256String(@NonNull File filePath)
     {
