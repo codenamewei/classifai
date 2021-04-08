@@ -40,7 +40,7 @@ public class FileHashing
 
             int count;
 
-            //not thread safe, hence single instance per function
+            //not thread safe, single instance per function
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
             BufferedInputStream bis = new BufferedInputStream(new FileInputStream(filePath));
@@ -59,7 +59,7 @@ public class FileHashing
         }
         catch(Exception e)
         {
-            log.info("Error in generating SHA-256 Hashing");
+            log.info("Error in generating SHA-256 Hashing", e);
         }
 
         return null;

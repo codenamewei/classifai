@@ -31,6 +31,7 @@ import ai.classifai.util.message.ErrorCodes;
 import ai.classifai.util.message.ReplyHandler;
 import ai.classifai.util.project.ProjectHandler;
 import ai.classifai.util.project.ProjectInfra;
+import ai.classifai.util.security.Encryption;
 import ai.classifai.util.type.database.H2;
 import ai.classifai.util.type.database.RelationalDb;
 import ai.classifai.wasabis3.WasabiClientHandler;
@@ -52,6 +53,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -100,9 +102,11 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
             String accessKey = request.getString(CloudParamConfig.getAccessKeyParam());
             String secretAccessKey = request.getString(CloudParamConfig.getSecretAccessKeyParam());
 
+            S3Client s3Client = WasabiClientHandler.buildClient(accessKey, secretAccessKey, false);
+
             WasabiCredential wasabiCredential =  WasabiCredential.builder()
                     .cloudId(request.getString(CloudParamConfig.getCloudIdParam()))
-                    .wasabiS3Client(WasabiClientHandler.buildClient(accessKey, secretAccessKey, false))
+                    .wasabiS3Client(s3Client)
                     .wasabiBucket(request.getString(CloudParamConfig.getBucketParam()))
                     .build();
 
@@ -185,13 +189,18 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
 
     public Tuple buildWasabiTuple(@NonNull JsonObject input, @NonNull String projectId)
     {
-        String encryptedAccessKey = input.getString(CloudParamConfig.getAccessKeyParam());
-        String encryptedSecretAccessKey = input.getString(CloudParamConfig.getSecretAccessKeyParam());
+        String accessKey = input.getString(CloudParamConfig.getAccessKeyParam());
+        String secretAccessKey = input.getString(CloudParamConfig.getSecretAccessKeyParam());
+
+        Encryption encryption = new Encryption();
+
+        String encryptedAccessKey = encryption.encrypt(accessKey);
+        String encryptedSecretAccessKey = encryption.encrypt(secretAccessKey);
 
         return Tuple.of(input.getString(CloudParamConfig.getCloudIdParam()),         //cloud_id
                 projectId,                                                           //project_id
-                encryptedAccessKey,                                                     //access_key
-                encryptedSecretAccessKey,                                               //secret_access_key
+                encryptedAccessKey,                                                  //access_key
+                encryptedSecretAccessKey,                                            //secret_access_key
                 input.getString(CloudParamConfig.getBucketParam()));                 //bucket
 
     }
@@ -233,6 +242,24 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
             });
     }
 
+    //{user.home}//tmp to store temporary files of wasabi project
+    private void createTmpFolder()
+    {
+        File tmpFilePath = new File(ParamConfig.getTmpProjectPath());
+
+        if(!tmpFilePath.exists())
+        {
+            if(tmpFilePath.mkdir())
+            {
+                log.debug("Temporary folder path created at " + tmpFilePath.getAbsolutePath());
+            }
+            else
+            {
+                log.debug("Temporary folder path in " + tmpFilePath.getAbsolutePath() + " failed to created");
+            }
+        }
+    }
+
 
     @Override
     public void stop(Promise<Void> promise)
@@ -265,6 +292,8 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
                                 vertx.eventBus().consumer(WasabiQuery.getQueue(), this::onMessage);
 
                                 configWasabiCredentialFromDb();
+
+                                createTmpFolder();
 
                                 promise.complete();
                             }

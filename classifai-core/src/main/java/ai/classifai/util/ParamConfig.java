@@ -45,6 +45,8 @@ public class ParamConfig
     @Getter private static final File rootSearchPath = new File(System.getProperty("user.home"));
     @Getter private static final String logFilePath = DbConfig.getDbRootPath() + File.separator + "logs" + File.separator + "classifai.log";
 
+    @Getter private static final String tmpProjectPath = DbConfig.getDbRootPath() + File.separator + "tmp";
+
     @Getter private static final String dateTimeFormat = "yyyy/MM/dd hh:mm:ss a";
 
     @Getter private static final String projectNameParam = "project_name";

@@ -21,6 +21,7 @@ import ai.classifai.database.VerticleServiceable;
 import ai.classifai.database.portfolio.PortfolioVerticle;
 import ai.classifai.database.versioning.Annotation;
 import ai.classifai.database.versioning.AnnotationVersion;
+import ai.classifai.loader.LoaderStatus;
 import ai.classifai.loader.ProjectLoader;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.collection.ConversionHandler;
@@ -134,40 +135,49 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
         List<String> oriUUIDList = loader.getUuidListFromDb();
 
-        loader.setDbOriUUIDSize(oriUUIDList.size());
-
-        for (int i = 0; i < oriUUIDList.size(); ++i)
+        if(loader.isCloud())
         {
-            final Integer currentLength = i + 1;
-            final String UUID = oriUUIDList.get(i);
+            //do not check if image readable if its from cloud
+            loader.setSanityUuidList(oriUUIDList);
+            loader.setLoaderStatus(LoaderStatus.LOADED);
+        }
+        else
+        {
+            loader.setDbOriUUIDSize(oriUUIDList.size());
 
-            Tuple params = Tuple.of(projectId, UUID);
+            for (int i = 0; i < oriUUIDList.size(); ++i)
+            {
+                final Integer currentLength = i + 1;
+                final String UUID = oriUUIDList.get(i);
 
-            JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
+                Tuple params = Tuple.of(projectId, UUID);
 
-            clientJdbcPool.preparedQuery(AnnotationQuery.getLoadValidProjectUuid())
-                    .execute(params)
-                    .onComplete(fetch -> {
+                JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
 
-                        if (fetch.succeeded())
-                        {
-                            RowSet<Row> rowSet = fetch.result();
+                clientJdbcPool.preparedQuery(AnnotationQuery.getLoadValidProjectUuid())
+                        .execute(params)
+                        .onComplete(fetch -> {
 
-                            if(rowSet.iterator().hasNext())
+                            if (fetch.succeeded())
                             {
-                                Row row = rowSet.iterator().next();
+                                RowSet<Row> rowSet = fetch.result();
 
-                                String dataSubPath = row.getString(0);
-                                File dataFullPath = getDataFullPath(projectId, dataSubPath);
-
-                                if (ImageHandler.isImageReadable(dataFullPath))
+                                if(rowSet.iterator().hasNext())
                                 {
-                                    loader.pushDBValidUUID(UUID);
+                                    Row row = rowSet.iterator().next();
+
+                                    String dataSubPath = row.getString(0);
+                                    File dataFullPath = getDataFullPath(projectId, dataSubPath);
+
+                                    if (ImageHandler.isImageReadable(dataFullPath))
+                                    {
+                                        loader.pushDBValidUUID(UUID);
+                                    }
                                 }
                             }
-                        }
-                        loader.updateDBLoadingProgress(currentLength);
-                    });
+                            loader.updateDBLoadingProgress(currentLength);
+                        });
+            }
         }
     }
 

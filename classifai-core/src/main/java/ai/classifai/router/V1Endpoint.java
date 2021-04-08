@@ -221,48 +221,40 @@ public class V1Endpoint {
 
         loader.toggleFrontEndLoaderParam(); //if project is_new = true, change to false since loading the project
 
-        if(loader.isCloud())
-        {
-            //FIXME
-            HTTPResponseHandler.configureOK(context);
-        }
-        else
-        {
-            LoaderStatus loaderStatus = loader.getLoaderStatus();
+        LoaderStatus loaderStatus = loader.getLoaderStatus();
 
-            //Project exist, did not load in ProjectLoader, proceed with loading and checking validity of uuid from database
-            if(loaderStatus.equals(LoaderStatus.DID_NOT_INITIATED) || loaderStatus.equals(LoaderStatus.LOADED))
+        //Project exist, did not load in ProjectLoader, proceed with loading and checking validity of uuid from database
+        if(loaderStatus.equals(LoaderStatus.DID_NOT_INITIATED) || loaderStatus.equals(LoaderStatus.LOADED))
+        {
+            loader.setLoaderStatus(LoaderStatus.LOADING);
+
+            JsonObject jsonObject = new JsonObject().put(ParamConfig.getProjectIdParam(), loader.getProjectId());
+
+            DeliveryOptions uuidListOptions = new DeliveryOptions().addHeader(ParamConfig.getActionKeyword(), AnnotationQuery.getLoadValidProjectUuid());
+
+            //start checking uuid if it's path is still exist
+            vertx.eventBus().request(queue, jsonObject, uuidListOptions, fetch ->
             {
-                loader.setLoaderStatus(LoaderStatus.LOADING);
+                JsonObject removalResponse = (JsonObject) fetch.result().body();
 
-                JsonObject jsonObject = new JsonObject().put(ParamConfig.getProjectIdParam(), loader.getProjectId());
-
-                DeliveryOptions uuidListOptions = new DeliveryOptions().addHeader(ParamConfig.getActionKeyword(), AnnotationQuery.getLoadValidProjectUuid());
-
-                //start checking uuid if it's path is still exist
-                vertx.eventBus().request(queue, jsonObject, uuidListOptions, fetch ->
+                if (ReplyHandler.isReplyOk(removalResponse))
                 {
-                    JsonObject removalResponse = (JsonObject) fetch.result().body();
+                    HTTPResponseHandler.configureOK(context);
+                }
+                else
+                {
+                    HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError("Failed to load project " + projectName + ". Check validity of data points failed."));
+                }
+            });
 
-                    if (ReplyHandler.isReplyOk(removalResponse))
-                    {
-                        HTTPResponseHandler.configureOK(context);
-                    }
-                    else
-                    {
-                        HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError("Failed to load project " + projectName + ". Check validity of data points failed."));
-                    }
-                });
-
-            }
-            else if(loaderStatus.equals(LoaderStatus.LOADING))
-            {
-                HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError("Loading project is in progress in the backend. Did not reinitiated."));
-            }
-            else if(loaderStatus.equals(LoaderStatus.ERROR))
-            {
-                HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError("LoaderStatus with error message when loading project " + projectName + ".Loading project aborted. "));
-            }
+        }
+        else if(loaderStatus.equals(LoaderStatus.LOADING))
+        {
+            HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError("Loading project is in progress in the backend. Did not reinitiated."));
+        }
+        else if(loaderStatus.equals(LoaderStatus.ERROR))
+        {
+            HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError("LoaderStatus with error message when loading project " + projectName + ".Loading project aborted. "));
         }
     }
 
@@ -296,8 +288,9 @@ public class V1Endpoint {
 
             HTTPResponseHandler.configureOK(context, jsonObject);
 
-        } else if (loaderStatus.equals(LoaderStatus.LOADED)) {
-
+        }
+        else if (loaderStatus.equals(LoaderStatus.LOADED))
+        {
             JsonObject jsonObject = new JsonObject();
             jsonObject.put(ReplyHandler.getMessageKey(), loaderStatus.ordinal());
 
@@ -319,6 +312,7 @@ public class V1Endpoint {
 
             HTTPResponseHandler.configureOK(context, jsonObject);
         }
+
     }
 
     /**

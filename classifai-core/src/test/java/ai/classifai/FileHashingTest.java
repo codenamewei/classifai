@@ -25,7 +25,7 @@ import java.io.File;
 import java.net.URISyntaxException;
 
 /**
- * Password encryption test
+ * File Hashing Test
  *
  * @author codenamewei
  */

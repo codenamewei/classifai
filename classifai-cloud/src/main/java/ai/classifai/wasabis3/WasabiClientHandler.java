@@ -16,6 +16,7 @@
 package ai.classifai.wasabis3;
 
 import ai.classifai.util.CloudParamConfig;
+import ai.classifai.util.security.Encryption;
 import lombok.NonNull;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -32,6 +33,15 @@ public class WasabiClientHandler
 {
     public static S3Client buildClient(@NonNull String accessKey, @NonNull String secretAccessKey, boolean isEncrypted)
     {
+
+        if(isEncrypted)
+        {
+            Encryption encryption = new Encryption();
+
+            accessKey = encryption.decrypt(accessKey);
+            secretAccessKey = encryption.decrypt(secretAccessKey);
+        }
+
         AwsSessionCredentials awsCreds = AwsSessionCredentials.create(accessKey, secretAccessKey, "");
 
         //TODO how to check if client is valid

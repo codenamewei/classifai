@@ -68,7 +68,6 @@ public class ProjectParser
                     .put(ParamConfig.getImgOriWParam(), row.getInteger(4))      //img_ori_w
                     .put(ParamConfig.getImgOriHParam(), row.getInteger(5));     //img_ori_h
 
-
             //uuid, version, content
             content.put(row.getString(0), annotationJsonObject);
         }
