@@ -114,11 +114,18 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
 
             ProjectHandler.loadProjectIdWasabiCredential(projectId, wasabiCredential);
 
+            String projectPath = ParamConfig.getTmpProjectPath() + File.separator + projectName;
+
+            if(FileHandler.createFolderIfNotExist(new File(projectPath)))
+            {
+                log.debug("Project folder path created at " + projectPath);
+            }
+
             ProjectLoader loader = ProjectLoader.builder()
                     .projectId(projectId)
                     .projectName(projectName)
                     .annotationType(annotationInt)
-                    .projectPath("")
+                    .projectPath(projectPath)
                     .loaderStatus(LoaderStatus.LOADED)
                     .isProjectStarred(Boolean.FALSE)
                     .isProjectNew(Boolean.TRUE)
@@ -215,6 +222,7 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
                 .put("max_pool_size", 30));
     }
 
+
     private static void configWasabiCredentialFromDb()
     {
         wasabiJdbcPool.query(WasabiQuery.getRetrieveCredential())
@@ -241,25 +249,6 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
                 }
             });
     }
-
-    //{user.home}//tmp to store temporary files of wasabi project
-    private void createTmpFolder()
-    {
-        File tmpFilePath = new File(ParamConfig.getTmpProjectPath());
-
-        if(!tmpFilePath.exists())
-        {
-            if(tmpFilePath.mkdir())
-            {
-                log.debug("Temporary folder path created at " + tmpFilePath.getAbsolutePath());
-            }
-            else
-            {
-                log.debug("Temporary folder path in " + tmpFilePath.getAbsolutePath() + " failed to created");
-            }
-        }
-    }
-
 
     @Override
     public void stop(Promise<Void> promise)
@@ -293,7 +282,13 @@ public class WasabiVerticle extends AbstractVerticle implements VerticleServicea
 
                                 configWasabiCredentialFromDb();
 
-                                createTmpFolder();
+                                //{user.home}//tmp to store temporary files of wasabi project
+                                File tmpFilePath = new File(ParamConfig.getTmpProjectPath());
+
+                                if(FileHandler.createFolderIfNotExist(tmpFilePath))
+                                {
+                                    log.debug("Temporary folder path created at " + tmpFilePath.getAbsolutePath());
+                                }
 
                                 promise.complete();
                             }

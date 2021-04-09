@@ -21,8 +21,11 @@ import ai.classifai.database.VerticleServiceable;
 import ai.classifai.database.portfolio.PortfolioVerticle;
 import ai.classifai.database.versioning.Annotation;
 import ai.classifai.database.versioning.AnnotationVersion;
+import ai.classifai.database.wasabis3.WasabiVerticle;
 import ai.classifai.loader.LoaderStatus;
 import ai.classifai.loader.ProjectLoader;
+import ai.classifai.ui.launcher.WelcomeLauncher;
+import ai.classifai.util.InternetConnection;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.collection.ConversionHandler;
 import ai.classifai.util.collection.UuidGenerator;
@@ -31,6 +34,7 @@ import ai.classifai.util.data.ImageHandler;
 import ai.classifai.util.message.ReplyHandler;
 import ai.classifai.util.project.ProjectHandler;
 import ai.classifai.util.type.AnnotationHandler;
+import ai.classifai.wasabis3.WasabiClientHandler;
 import ai.classifai.wasabis3.WasabiCredential;
 import ai.classifai.wasabis3.WasabiImageHandler;
 import io.vertx.core.AbstractVerticle;
@@ -47,13 +51,20 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static javax.swing.JOptionPane.showMessageDialog;
 
 /**
  * Implementation of Functionalities for each annotation type
@@ -100,7 +111,7 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
                             {
                                 WasabiCredential wasabiCredential = ProjectHandler.getWasabiCredential(loader);
 
-                                String cloudBase64Binary = WasabiImageHandler.getRawBase64Binary(wasabiCredential, dataPath);
+                                String cloudBase64Binary = WasabiImageHandler.getRawBase64BinaryString(wasabiCredential, dataPath);
                                 response.put(ParamConfig.getImgSrcParam(), ImageFileType.getDefaultHeader() + cloudBase64Binary);
 
                             }
@@ -129,28 +140,94 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
         return Paths.get(projBasePath, dataSubPath).toFile();
     }
 
+    private static void preloadUuidList(@NonNull ProjectLoader loader)
+    {
+        Tuple params = Tuple.of(loader.getProjectId());
+
+        if(!InternetConnection.isConnected())
+        {
+            String messageInfo = "Classifai not connected to Internet. Loading of wasabi project aborted.";
+
+            showMessageDialog(null,
+                    messageInfo, "Loading Failed", JOptionPane.WARNING_MESSAGE);
+
+
+            log.debug(messageInfo);
+            return;
+        }
+
+        JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
+
+        clientJdbcPool.preparedQuery(AnnotationQuery.getPreloadDataPath())
+                .execute(params)
+                .onComplete(fetch -> {
+
+                    if (fetch.succeeded())
+                    {
+                        RowSet<Row> rowSet = fetch.result();
+
+                        if (rowSet.size() == 0) {
+
+                            log.debug("Rows empty for " + loader.getProjectName());
+
+                        }
+                        else
+                        {
+                            RowIterator<Row> rowIterator = rowSet.iterator();
+
+                            int counter = 0;
+
+                            while(rowIterator.hasNext())
+                            {
+                                Row row = rowIterator.next();
+
+                                String dataPath = row.getString(0);
+
+                                byte[] bytes = WasabiImageHandler.getRawBase64Binary(ProjectHandler.getWasabiCredential(loader), dataPath);
+
+                                try
+                                {
+                                    Path outputFilePath = Paths.get(loader.getProjectPath() + File.separator + dataPath);
+
+                                    Files.write(outputFilePath, bytes);
+
+                                    loader.pushDBValidUUID(row.getString(1)); //uuid
+                                    loader.updateDBLoadingProgress(counter++);
+
+                                }
+                                catch(IOException e)
+                                {
+                                    log.debug("Failed in writing object to file: ", e);
+                                }
+
+                            }
+
+
+                        }
+                    }
+                });
+    }
+
     public static void loadValidProjectUuid(@NonNull String projectId)
     {
         ProjectLoader loader = ProjectHandler.getProjectLoader(projectId);
 
-        List<String> oriUUIDList = loader.getUuidListFromDb();
-
         if(loader.isCloud())
         {
-            //do not check if image readable if its from cloud
-            loader.setSanityUuidList(oriUUIDList);
-            loader.setLoaderStatus(LoaderStatus.LOADED);
+            AnnotationVerticle.preloadUuidList(loader);
         }
         else
         {
+            List<String> oriUUIDList = loader.getUuidListFromDb();
+
             loader.setDbOriUUIDSize(oriUUIDList.size());
 
             for (int i = 0; i < oriUUIDList.size(); ++i)
             {
                 final Integer currentLength = i + 1;
-                final String UUID = oriUUIDList.get(i);
+                final String uuid = oriUUIDList.get(i);
 
-                Tuple params = Tuple.of(projectId, UUID);
+                Tuple params = Tuple.of(projectId, uuid);
 
                 JDBCPool clientJdbcPool = AnnotationHandler.getJDBCPool(loader);
 
@@ -171,7 +248,7 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
                                     if (ImageHandler.isImageReadable(dataFullPath))
                                     {
-                                        loader.pushDBValidUUID(UUID);
+                                        loader.pushDBValidUUID(uuid);
                                     }
                                 }
                             }
@@ -453,8 +530,6 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
                     loader.updateReloadingProgress(currentProcessedLength);
                 });
-
-
     }
 
     public void deleteProject(Message<JsonObject> message)
@@ -599,33 +674,18 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
         AnnotationVersion version = annotation.getAnnotationDict().get(loader.getCurrentVersionUuid());
 
         Map<String, String> imgData = new HashMap<>();
-        String dataPath = "";
 
-        if(loader.isCloud())
+        File dataPath = Paths.get(loader.getProjectPath(), annotation.getImgPath()).toFile();
+
+        try
         {
-            WasabiCredential wasabiCredential = ProjectHandler.getWasabiCredential(loader);
+            BufferedImage img  = ImageIO.read(dataPath);
 
-            BufferedImage img = WasabiImageHandler.getThumbNail(wasabiCredential, annotation.getImgPath());
-
-            //not checking orientation for on cloud version
-            imgData = ImageHandler.getThumbNail(img, false, null);
+            imgData = ImageHandler.getThumbNail(img, true, dataPath);
         }
-        else
+        catch(IOException e)
         {
-            dataPath = Paths.get(loader.getProjectPath(), annotation.getImgPath()).toString();
-
-            try
-            {
-                File fileDataPath = new File(dataPath);
-
-                BufferedImage img  = ImageIO.read(fileDataPath);
-
-                imgData = ImageHandler.getThumbNail(img, true, fileDataPath);
-            }
-            catch(IOException e)
-            {
-                log.debug("Failure in reading image of path " + dataPath, e);
-            }
+            log.debug("Failure in reading image of path " + dataPath.getAbsolutePath(), e);
         }
 
         JsonObject response = ReplyHandler.getOkReply();
@@ -633,7 +693,7 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
         response.put(ParamConfig.getUuidParam(), uuid);
         response.put(ParamConfig.getProjectNameParam(), loader.getProjectName());
 
-        response.put(ParamConfig.getImgPathParam(), dataPath);
+        response.put(ParamConfig.getImgPathParam(), dataPath.getAbsolutePath());
         response.put(annotationKey, version.getAnnotation());
         response.put(ParamConfig.getImgDepth(),  Integer.parseInt(imgData.get(ParamConfig.getImgDepth())));
         response.put(ParamConfig.getImgXParam(), version.getImgX());
@@ -644,6 +704,13 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
         response.put(ParamConfig.getImgOriHParam(), Integer.parseInt(imgData.get(ParamConfig.getImgOriHParam())));
         response.put(ParamConfig.getImgThumbnailParam(), imgData.get(ParamConfig.getBase64Param()));
 
-        message.replyAndRequest(response);
+        try
+        {
+            message.replyAndRequest(response);
+        }
+        catch(IllegalStateException e)
+        {
+            log.debug("Error in retrieving response", e);
+        }
     }
 }

@@ -159,6 +159,13 @@ public class ImageHandler {
         return img.getHeight();
     }
 
+    public static String getExtensionFormat(String imagePath)
+    {
+        int dotIndex = imagePath.lastIndexOf(".");
+
+        return imagePath.substring(dotIndex + 1);
+    }
+
     private static int getWidth(BufferedImage img, int orientation)
     {
         if (orientation == 8 || orientation == 6)
@@ -316,7 +323,6 @@ public class ImageHandler {
             {
                 AnnotationVerticle.saveDataPoint(loader, (String) filesPath.get(i), i + 1);
             }
-
         }
         //local file system
         else
@@ -327,7 +333,6 @@ public class ImageHandler {
 
                 AnnotationVerticle.saveDataPoint(loader, dataSubPath, i + 1);
             }
-
         }
 
     }

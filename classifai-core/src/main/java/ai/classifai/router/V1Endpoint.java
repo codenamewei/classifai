@@ -287,7 +287,6 @@ public class V1Endpoint {
             jsonObject.put(ParamConfig.getProgressMetadata(), projectLoader.getProgress());
 
             HTTPResponseHandler.configureOK(context, jsonObject);
-
         }
         else if (loaderStatus.equals(LoaderStatus.LOADED))
         {

@@ -26,6 +26,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Base64;
 
@@ -39,30 +40,29 @@ import java.util.Base64;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class WasabiImageHandler
 {
-
-    public static String getRawBase64Binary(@NonNull WasabiCredential wasabiCredential, @NonNull String dataPath)
+    public static String getRawBase64BinaryString(@NonNull WasabiCredential wasabiCredential, @NonNull String dataPath)
     {
-        byte[] bytes = getObject(wasabiCredential, dataPath);
+        byte[] bytes = getRawBase64Binary(wasabiCredential, dataPath);
 
         return Base64.getEncoder().encodeToString(bytes);
     }
 
     public static BufferedImage getThumbNail(@NonNull WasabiCredential wasabiCredential, @NonNull String dataPath)
     {
-        byte[] bytes = getObject(wasabiCredential, dataPath);
+        byte[] bytes = getRawBase64Binary(wasabiCredential, dataPath);
 
         return bytesToBufferedImage(bytes);
     }
 
-    private static byte[] getObject(@NonNull WasabiCredential project, @NonNull String key)
+    public static byte[] getRawBase64Binary(@NonNull WasabiCredential wasabiCredential, @NonNull String key)
     {
         GetObjectRequest objectRequest = GetObjectRequest.builder()
-                .bucket(project.getWasabiBucket())
+                .bucket(wasabiCredential.getWasabiBucket())
                 .key(key)
                 .range("*")
                 .build();
 
-        ResponseInputStream<GetObjectResponse> objectPortion = project.getWasabiS3Client().getObject(objectRequest);
+        ResponseInputStream<GetObjectResponse> objectPortion = wasabiCredential.getWasabiS3Client().getObject(objectRequest);
 
         if(objectPortion != null)
         {
@@ -79,7 +79,7 @@ public class WasabiImageHandler
         }
         else
         {
-            log.info("Object response is null: " + project.getWasabiBucket() + " " + key);
+            log.info("Object response is null: " + wasabiCredential.getWasabiBucket() + " " + key);
         }
 
         return null;
