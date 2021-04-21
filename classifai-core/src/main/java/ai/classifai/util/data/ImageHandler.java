@@ -23,11 +23,9 @@ import ai.classifai.util.ParamConfig;
 import ai.classifai.util.data.error.NotSupportedImageTypeError;
 import ai.classifai.util.project.ProjectHandler;
 import com.drew.imaging.ImageMetadataReader;
-import com.drew.imaging.ImageProcessingException;
 import com.drew.imaging.jpeg.JpegMetadataReader;
 import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
-import com.drew.metadata.MetadataException;
 import com.drew.metadata.bmp.BmpHeaderDirectory;
 import com.drew.metadata.exif.ExifIFD0Directory;
 import com.drew.metadata.jpeg.JpegDirectory;
@@ -42,7 +40,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.List;
 import java.util.*;
 
@@ -274,12 +271,14 @@ public class ImageHandler {
         return true;
     }
 
-    private static boolean isImageSizeInRange(File filePath) {
+    private static boolean isImageSizeInRange(File filePath)
+    {
         try
         {
             Metadata metadata = ImageMetadataReader.readMetadata(filePath);
 
-            int width, height;
+            int width;
+            int height;
 
             if (metadata.containsDirectoryOfType(JpegDirectory.class))
             {
