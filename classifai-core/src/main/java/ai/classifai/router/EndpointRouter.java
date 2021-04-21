@@ -21,6 +21,7 @@ import ai.classifai.selector.project.ProjectFolderSelector;
 import ai.classifai.selector.project.ProjectImportSelector;
 import ai.classifai.util.ParamConfig;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
@@ -82,9 +83,16 @@ public class EndpointRouter extends AbstractVerticle
     @Override
     public void start(Promise<Void> promise)
     {
+
         Router router = Router.router(vertx);
 
         //display for content in webroot
+        //uses no-cache header for cache busting, perform revalidation when fetching static assets
+        router.route().handler(ctx -> {
+            MultiMap headers = ctx.response().headers();
+            headers.add("Cache-Control", "no-cache");
+            ctx.next();
+        });
         router.route().handler(StaticHandler.create());
 
         final String projectEndpoint = "/:annotation_type/projects/:project_name";
