@@ -255,26 +255,6 @@ public class ImageHandler {
         try
         {
             File filePath = new File(file);
-
-            if (!isImageSizeInRange(filePath))
-            {
-                log.info("Image size bigger than maximum allowed input size. Skipped " + filePath.getAbsolutePath());
-                return false;
-            }
-        }
-        catch (Exception e)
-        {
-            log.debug("Error in checking if image file valid - " + file, e);
-            return false;
-        }
-
-        return true;
-    }
-
-    private static boolean isImageSizeInRange(File filePath)
-    {
-        try
-        {
             Metadata metadata = ImageMetadataReader.readMetadata(filePath);
 
             int width;
@@ -307,7 +287,7 @@ public class ImageHandler {
         }
         catch (Exception e)
         {
-            log.info(String.valueOf(e));
+            log.info("Skipped " + file, e);
             return false;
         }
 
