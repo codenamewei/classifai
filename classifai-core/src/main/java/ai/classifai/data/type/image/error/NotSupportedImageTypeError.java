@@ -13,7 +13,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package ai.classifai.util.data.error;
+package ai.classifai.data.type.image.error;
 
 /**
  * Exception thrown when data type is not supported

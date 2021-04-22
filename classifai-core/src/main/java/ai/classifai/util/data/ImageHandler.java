@@ -15,21 +15,19 @@
  */
 package ai.classifai.util.data;
 
+import ai.classifai.data.type.image.ImageData;
+import ai.classifai.data.type.image.ImageDataFactory;
 import ai.classifai.data.type.image.ImageFileType;
 import ai.classifai.database.annotation.AnnotationVerticle;
 import ai.classifai.loader.ProjectLoader;
 import ai.classifai.selector.filesystem.FileSystemStatus;
 import ai.classifai.util.ParamConfig;
-import ai.classifai.util.data.error.NotSupportedImageTypeError;
 import ai.classifai.util.project.ProjectHandler;
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.jpeg.JpegMetadataReader;
 import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
-import com.drew.metadata.bmp.BmpHeaderDirectory;
 import com.drew.metadata.exif.ExifIFD0Directory;
-import com.drew.metadata.jpeg.JpegDirectory;
-import com.drew.metadata.png.PngDirectory;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -255,33 +253,14 @@ public class ImageHandler {
         try
         {
             File filePath = new File(file);
+
             Metadata metadata = ImageMetadataReader.readMetadata(filePath);
 
-            int width;
-            int height;
+            ImageData imageData = new ImageDataFactory().getImageData(metadata);
 
-            if (metadata.containsDirectoryOfType(JpegDirectory.class))
+            if (imageData.getWidth() > ImageFileType.getMaxWidth() || imageData.getHeight() > ImageFileType.getMaxHeight())
             {
-                width = metadata.getFirstDirectoryOfType(JpegDirectory.class).getImageWidth();
-                height = metadata.getFirstDirectoryOfType(JpegDirectory.class).getImageHeight();
-            }
-            else if (metadata.containsDirectoryOfType(PngDirectory.class))
-            {
-                width = metadata.getFirstDirectoryOfType(PngDirectory.class).getInt(PngDirectory.TAG_IMAGE_WIDTH);
-                height = metadata.getFirstDirectoryOfType(PngDirectory.class).getInt(PngDirectory.TAG_IMAGE_HEIGHT);
-            }
-            else if (metadata.containsDirectoryOfType(BmpHeaderDirectory.class))
-            {
-                width = metadata.getFirstDirectoryOfType(BmpHeaderDirectory.class).getInt(BmpHeaderDirectory.TAG_IMAGE_WIDTH);
-                height = metadata.getFirstDirectoryOfType(BmpHeaderDirectory.class).getInt(BmpHeaderDirectory.TAG_IMAGE_HEIGHT);
-            }
-            else
-            {
-                throw new NotSupportedImageTypeError("File type not supported");
-            }
-
-            if (width > ImageFileType.getMaxWidth() || height > ImageFileType.getMaxHeight())
-            {
+                log.info("Image size bigger than maximum allowed input size. Skipped " + file);
                 return false;
             }
         }
