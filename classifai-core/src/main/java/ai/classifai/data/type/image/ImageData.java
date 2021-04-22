@@ -27,7 +27,7 @@ public abstract class ImageData
 {
     protected Metadata metadata;
 
-    public ImageData(Metadata metadata)
+    protected ImageData(Metadata metadata)
     {
         this.metadata = metadata;
     }
