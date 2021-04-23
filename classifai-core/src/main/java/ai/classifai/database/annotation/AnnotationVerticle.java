@@ -306,7 +306,7 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
                                 if(loader.isCloud() || ImageHandler.isImageReadable(new File(fullPath)))
                                 {
-                                    Map<String, AnnotationVersion> annotationDict = ProjectParser.buildAnnotationDict(row.getJsonArray(2));
+                                    Map<String, AnnotationVersion> annotationDict = ProjectParser.buildAnnotationDict(new JsonArray(row.getString(2)));
 
                                     Annotation annotation = Annotation.builder()
                                             .uuid(row.getString(0))         //uuid
@@ -579,9 +579,6 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
         ProjectLoader loader = ProjectHandler.getProjectLoader(projectId);
 
         Annotation annotation = loader.getUuidAnnotationDict().get(uuid);
-
-        System.out.println(loader.getCurrentVersionUuid());
-        System.out.println(annotation.getAnnotationDict().keySet());
 
         AnnotationVersion version = annotation.getAnnotationDict().get(loader.getCurrentVersionUuid());
 
