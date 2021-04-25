@@ -15,7 +15,6 @@
  */
 package ai.classifai.database.versioning;
 
-import ai.classifai.action.ActionOps;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.collection.UuidGenerator;
 import io.vertx.core.json.JsonArray;
