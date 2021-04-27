@@ -15,7 +15,7 @@
  */
 package ai.classifai.data.type.image;
 
-import ai.classifai.data.type.image.error.NotSupportedImageTypeError;
+import ai.classifai.util.error.NotSupportedImageTypeError;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.bmp.BmpHeaderDirectory;
 import com.drew.metadata.jpeg.JpegDirectory;

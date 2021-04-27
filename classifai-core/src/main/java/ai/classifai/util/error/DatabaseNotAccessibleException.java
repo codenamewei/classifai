@@ -13,22 +13,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package ai.classifai.util.type;
+package ai.classifai.util.error;
 
 /**
- * Types of Annotation
+ * Exception thrown when database is not accessible
  *
- * @author codenamewei
+ * @author YCCertifai
  */
-public enum AnnotationType
+public class DatabaseNotAccessibleException extends Exception
 {
-    BOUNDINGBOX,
-    SEGMENTATION;
-    //ADD WHEN HAVE NEW ANNOTATION TYPE
-
-    public static String getByInt(int integer)
+    public DatabaseNotAccessibleException(String message)
     {
-        return AnnotationType.values()[integer].name();
+        super(message);
     }
 }
-

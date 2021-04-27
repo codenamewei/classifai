@@ -13,17 +13,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package ai.classifai.data.type.image.error;
+package ai.classifai.database.migration;
 
-/**
- * Exception thrown when data type is not supported
+/***
+ * Functionalities required for database migration
  *
  * @author YCCertifai
  */
-public class NotSupportedImageTypeError extends Exception{
-
-    public NotSupportedImageTypeError(String message)
-    {
-        super(message);
-    }
+public interface DbMigrationServiceable
+{
+    // true: migrate; false: abort migration and classifai
+    boolean migrate();
 }

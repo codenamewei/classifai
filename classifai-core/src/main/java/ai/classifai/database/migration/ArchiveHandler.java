@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.io.IOException;
 
 /***
  *Archive Handler
@@ -50,25 +51,17 @@ public class ArchiveHandler {
         if (!file.exists()) file.mkdir();
     }
 
-    public static void copyToArchive(String path)
-    {
-        try
-        {
-            File source = new File(path);
-            File destination = new File(ARCHIVE_PATH, source.getName());
+    public static void copyToArchive(String path) throws IOException {
+        File source = new File(path);
+        File destination = new File(ARCHIVE_PATH, source.getName());
 
-            if (source.isDirectory())
-            {
-                FileUtils.copyDirectory(source, destination);
-            }
-            else
-            {
-                FileUtils.copyFile(source, destination);
-            }
-        }
-        catch (Exception e)
+        if (source.isDirectory())
         {
-            log.error("Unable to copy " + ARCHIVE_PATH + "\n"+ e);
+            FileUtils.copyDirectory(source, destination);
+        }
+        else
+        {
+            FileUtils.copyFile(source, destination);
         }
     }
 }

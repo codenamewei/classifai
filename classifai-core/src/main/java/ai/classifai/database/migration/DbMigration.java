@@ -16,168 +16,257 @@
 package ai.classifai.database.migration;
 
 import ai.classifai.database.DbConfig;
-import ai.classifai.database.annotation.AnnotationQuery;
-import ai.classifai.database.annotation.bndbox.BoundingBoxDbQuery;
-import ai.classifai.database.annotation.seg.SegDbQuery;
-import ai.classifai.database.portfolio.PortfolioDbQuery;
-import ai.classifai.util.ParamConfig;
-import ai.classifai.util.collection.ConversionHandler;
-import ai.classifai.util.collection.UuidGenerator;
+import ai.classifai.ui.component.ConfirmDialog;
 import ai.classifai.util.data.FileHandler;
-import ai.classifai.util.datetime.DateTime;
+import ai.classifai.util.error.DatabaseNotAccessibleException;
 import ai.classifai.util.type.database.RelationalDb;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONArray;
-import org.json.JSONObject;
-import org.json.JSONTokener;
 
+import javax.swing.*;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.InputStream;
-import java.sql.*;
-import java.util.*;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static javax.swing.JOptionPane.showMessageDialog;
 
 /***
- * Program for database migration from HSQL -> H2
- * Require further generalization for all databases
+ * Implementation of functionalities of Database Migration
  *
  * @author YCCertifai
  */
 @Slf4j
-@NoArgsConstructor
-public class DbMigration
+public abstract class DbMigration implements DbMigrationServiceable
 {
-    private Map<String, String> tempJsonDict;
-    private Map<String, Connection> hsqlConnDict;
-    private Map<String, Connection> h2ConnDict;
+    private Map<String, Connection> fromConnDict;
+    private Map<String, Connection> toConnDict;
 
-    //Migration from v1 -> v2, replacing project id  & uuid from int -> string(uuidv4)
+    private Map<String, String> createTableQueryDict;
 
-    //Key: v1 project id
-    //Value: v2 project id
-    private Map<Integer, String> projectIDDict;
+    private RelationalDb fromDb;
+    private RelationalDb toDb;
 
-    //Key: v1 project id
-    //Value: Map<Integer v1 uuid, String v2 uuid>
-    private Map<Integer, Map<Integer, String>> projectUUIDDict;
+    //key list of databases those are required to be migrated
+    private List<String> tableKeyList;
 
-    public boolean migrate()
+    private boolean migrationOption;
+
+    /**
+     * Constructor
+     *
+     * @param fromDb database to be migrated
+     * @param toDb new database
+     * @param tableKeyList list of keys representing databases to be migrated
+     */
+    public DbMigration(RelationalDb fromDb, RelationalDb toDb, List<String> tableKeyList)
     {
-        //create temporary json file to store data
-        createTempJson();
+        this.tableKeyList = tableKeyList;
 
-        //hsql lock file to be removed to open up for migration
-        if(!DbConfig.getHsql().removeLckIfExist())
+        this.fromDb = fromDb;
+        this.toDb = toDb;
+
+        this.createTableQueryDict = buildCreateTableQueryDict(tableKeyList);
+    }
+
+    /**
+     * Build dictionary for query to create tables for each database
+     * key: database key
+     * value: create table query
+     *
+     * @param tableKeyList list of keys representing databases to be migrated
+     * @return the dictionary
+     */
+    protected abstract Map<String, String> buildCreateTableQueryDict(List<String> tableKeyList);
+
+    /**
+     * Perform checking if the database to be migrated is locked
+     *
+     * @param fromDb database to be migrated
+     * @return true if locked, else false
+     */
+    protected abstract boolean isFromDbLocked(RelationalDb fromDb);
+
+    /**
+     * read all the data from the database to be migrated into a jsonArray
+     *
+     * @param key key representing specific database
+     * @param con JDBC connection to the respective database
+     * @return jsonArray loaded with data
+     */
+    protected abstract JSONArray readFromDb2Json(String key, Connection con);
+
+    /**
+     * perform filtering to the data that are unable to be migrated
+     *
+     * @param inputJsonDict map with all jsonArray loaded with data to be migrated
+     *                      key: database key
+     *                      value: jsonArray of respective database
+     * @return pair of dictionary and JsonArray
+     * left: migratable databases; key: database key, value: database rows
+     * right: nonmigratable portfolio database; to inform user which project could not be migrated
+     */
+    protected abstract Pair<Map<String, JSONArray>, JSONArray> filterProjects(Map<String, JSONArray> inputJsonDict);
+    
+    /**
+     * perform transformation of data to fit new database structure
+     *
+     * @param filteredJsonDict map with all jsonArray loaded with data able to be migrated
+     *                         key: database key
+     *                         value: filtered jsonArray of respective database
+     * @return dictionary with all transformed jsonArray
+     */
+    protected abstract Map<String, JSONArray> transformData(Map<String, JSONArray> filteredJsonDict);
+
+    /**
+     * write transformed jsonArray into new database
+     *
+     * @param key key representing specific database
+     * @param con JDBC connection to the respective database
+     * @param arr jsonArray to be written into new database
+     * @return dictionary with all transformed jsonArray
+     */
+    protected abstract boolean writeJson2ToDb(String key, Connection con, JSONArray arr);
+
+    /**
+     * display a popup message to inform user the nonmigratable projects
+     *
+     * @param nonmigratableProjects the data of nonmigratable projects
+     */
+    protected abstract void showNonmigratableProjects(JSONArray nonmigratableProjects);
+
+    /**
+     * main function of database migration
+     *
+     * @return true means migrate; false means not migrating => abort classifai as well
+     */
+    @Override
+    public boolean migrate(){
+        try
         {
-            log.info("Remove lock file of hsql database failed. Migration aborted");
-            return false;
+            //move all old files to archive
+            copyToArchive();
+
+            //check if from database lock. If locked and unable to unlock, stop migration.
+            if (isFromDbLocked(fromDb))
+            {
+                throw new DatabaseNotAccessibleException("Remove lock file from origin database failed. Migration aborted.");
+            }
+
+            //create jdbc connection to from and to database
+            createConnectionToDatabases();
+
+            //read data from old database
+            Map<String, JSONArray> inputJsonDict = readInDb();
+
+            //split projects into migratable and nonmigratable
+            //left: dict for migratable projects databases
+            //right: only poftfolio database of nonmigratable projects
+            Pair<Map<String, JSONArray>, JSONArray> filteredPair = filterProjects(inputJsonDict);
+            
+            Map<String, JSONArray> filteredJsonDict = filteredPair.getLeft();
+            
+            JSONArray nonmigratableProjects = filteredPair.getRight();
+
+            //display to user the names of nonmigratable projects
+            showNonmigratableProjects(nonmigratableProjects);
+
+            //obtain user decision of database migration
+            migrationOption = new ConfirmDialog("Database Migration", "Do you want to perform migration?\nKindly press \"No\" and continue with ClassifAI v1 if your current working project is not migratable.\nThe nonmigratable data will be lost if migration is performed.\n").init();
+
+            if (migrationOption)
+            {
+                //transform migratable data into correct format
+                Map<String, JSONArray> outputJsonDict = transformData(filteredJsonDict);
+
+                //create table to new database
+                createToDbTables();
+
+                //write data to new database
+                if (!writeOutDb(outputJsonDict)) {
+                    log.debug("failure in writing to output database. Migration aborted.");
+                    throw new DatabaseNotAccessibleException("Failed to write to output database. Migration aborted.");
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            String message = "Database migration aborted!\nTry to close all ClassifAI applications and restart again.\n\nContact hello@classifai.ai if extra help is required.";
+            log.info(message, e);
+            showMessageDialog(new JFrame("Message"), message);
+            migrationOption = false;
         }
 
-        //Copy HSQL to .archive folder for backup
-        copyToArchive();
+        //close all jdbc connections
+        closeConnectionToDatases();
 
-        if(!createConnection())
-        {
-            log.debug("Migration aborted due to failed connection");
 
-            return false;
-        }
+        deleteDatabaseFiles(migrationOption);
 
-        //create map for conversion from integer id to uuid
-        UUIDConversion();
+        //delete old database files
+        return migrationOption;
+    }
 
-        //generate Json file from HSQL
-        hsql2Json();
-
-        //close hsql connection
-        closeConnection(new ArrayList<>(hsqlConnDict.values()));
-
-        ///delete hsql lingering files
-        for(String key : DbConfig.getTableKeys())
+    private void deleteDatabaseFiles(boolean skipOrDelete)
+    {
+        for (String key : tableKeyList)
         {
             String tableFolderPath = DbConfig.getTableFolderPathDict().get(key);
-            File tableFilePath = DbConfig.getH2().getTableAbsPathDict().get(key);
+            File tableFilePath = toDb.getTableAbsPathDict().get(key);
 
-            selectiveDelete(tableFolderPath, tableFilePath.getAbsolutePath());
-        }
-
-        //Create h2 tables
-        createH2(h2ConnDict.get(DbConfig.getPortfolioKey()), PortfolioDbQuery.getCreatePortfolioTable());
-        createH2(h2ConnDict.get(DbConfig.getBndBoxKey()), BoundingBoxDbQuery.getCreateProject());
-        createH2(h2ConnDict.get(DbConfig.getSegKey()), SegDbQuery.getCreateProject());
-
-        //read Json file to H2
-        json2H2();
-
-        //close h2 connections
-        closeConnection(new ArrayList<>(h2ConnDict.values()));
-
-        //delete intermediate json files
-        for(String key : DbConfig.getTableKeys())
-        {
-            FileHandler.deleteFile(new File(tempJsonDict.get(key)));
-        }
-
-        return true;
-    }
-
-    private void createTempJson()
-    {
-        tempJsonDict = new HashMap<>();
-
-        for(String table : DbConfig.getTableKeys())
-        {
-            String tempJson = DbConfig.getDbRootPath() + File.separator + table + ".json";
-
-            tempJsonDict.put(table, tempJson);
+            selectiveDelete(tableFolderPath, tableFilePath.getAbsolutePath(), skipOrDelete);
         }
     }
 
-    private boolean createConnection()
+    private void closeConnectionToDatases()
     {
-        hsqlConnDict = new HashMap<>();
-        h2ConnDict = new HashMap<>();
-
-        for(String key : DbConfig.getTableKeys())
-        {
-            try
-            {
-                Connection hsqlConn = connectDb(DbConfig.getTableAbsPathDict().get(key), DbConfig.getHsql());
-                Connection h2Conn = connectDb(DbConfig.getTableAbsPathDict().get(key), DbConfig.getH2());
-
-                hsqlConnDict.put(key, hsqlConn);
-                h2ConnDict.put(key, h2Conn);
-
-            }
-            catch (Exception e)
-            {
-                log.error("Unable to create connection by failing to connect to database: " + e);
-
-                return false;
-            }
-        }
-        return true;
+        closeConnection(new ArrayList<>(toConnDict.values()));
+        closeConnection(new ArrayList<>(fromConnDict.values()));
     }
 
-
-    private static Connection connectDb(String tableAbsPath, RelationalDb db) throws ClassNotFoundException, SQLException
+    private void createConnectionToDatabases() throws SQLException, ClassNotFoundException
     {
+        this.fromConnDict = createConnection(fromDb);
+        this.toConnDict = createConnection(toDb);
+    }
+
+    private Map<String, Connection> createConnection(RelationalDb db) throws SQLException, ClassNotFoundException
+    {
+        Map<String, Connection> connDict = new HashMap<>();
+
+        for (String key : tableKeyList)
+        {
+                Connection con = connectDb(DbConfig.getTableAbsPathDict().get(key), db);
+
+                connDict.put(key, con);
+        }
+
+        return connDict;
+    }
+
+    private Connection connectDb(String tableAbsPath, RelationalDb db) throws SQLException, ClassNotFoundException {
         Class.forName(db.getDriver());
 
         return DriverManager.getConnection(db.getUrlHeader() + tableAbsPath, db.getUser(), db.getPassword());
     }
 
-    private void copyToArchive()
-    {
-        for(String path : DbConfig.getTableFolderPathDict().values())
+    private void copyToArchive() throws IOException {
+        for (String key : tableKeyList)
         {
+            String path = DbConfig.getTableFolderPathDict().get(key);
+
             ArchiveHandler.copyToArchive(path);
         }
     }
 
-    private static void createH2(Connection con, String query)
+    private void createDbTable(Connection con, String query)
     {
         try (Statement st = con.createStatement())
         {
@@ -189,218 +278,37 @@ public class DbMigration
         }
     }
 
-    private static void writeJsonToFile(File file, JSONArray arr)
+    private void createToDbTables()
     {
-        try (FileWriter fw = new FileWriter(file))
+        for (String key : tableKeyList)
         {
-            fw.write(arr.toString());
-        }
-        catch (Exception e)
-        {
-            log.debug( "Unable to write JSON to file " + file.getName());
+            createDbTable(toConnDict.get(key), createTableQueryDict.get(key));
         }
     }
 
-    private static List<String> integerList2StringListWithMap(List<Integer> subsetList, Map<Integer,String> fullListMap)
+    private Map<String, JSONArray> readInDb()
     {
-        List<String> convertedList = new ArrayList<>();
+        Map<String, JSONArray> tempJsonDict = new HashMap<>();
 
-        for (Integer myInt : subsetList)
+        for (String key : tableKeyList)
         {
-            convertedList.add(fullListMap.get(myInt));
+            tempJsonDict.put(key, readFromDb2Json(key, fromConnDict.get(key)));
         }
 
-        return convertedList;
+        return tempJsonDict;
     }
 
-    private void UUIDConversion()
+    private boolean writeOutDb(Map<String, JSONArray> transformedJsonDict)
     {
-        projectIDDict = new HashMap<>();
-        projectUUIDDict = new HashMap<>();
-
-        Set<String> projectIDSet = new HashSet<>();
-
-        try (Statement st = hsqlConnDict.get(DbConfig.getPortfolioKey()).createStatement())
+        for (String key : tableKeyList)
         {
-            String query = PortfolioDbQuery.getRetrieveAllProjects();
-
-            ResultSet rs = st.executeQuery(query);
-
-            while (rs.next())
-            {
-                Map<Integer, String> uuidMap = new HashMap<>();
-
-                Integer projectIDInt = rs.getInt(1);
-                List<Integer> UUIDIntList = ConversionHandler.string2IntegerList(rs.getString(6));
-
-                String projectID = UuidGenerator.generateUuid();
-
-                projectIDDict.put(projectIDInt, projectID);
-
-                projectIDSet.add(projectID);
-
-                for (Integer uuidInt: UUIDIntList)
-                {
-                    String uuid = UuidGenerator.generateUuid();
-
-                    uuidMap.put(uuidInt, uuid);
-
-                }
-
-                projectUUIDDict.put(projectIDInt, uuidMap);
-            }
+            if(! writeJson2ToDb(key, toConnDict.get(key), transformedJsonDict.get(key))) return false;
         }
-        catch (Exception e)
-        {
-            log.debug("Unable to convert to UUID " + e);
-        }
+
+        return true;
     }
 
-    private void hsql2Json()
-    {
-        for (Map.Entry<String, Connection> entry : hsqlConnDict.entrySet())
-        {
-            String key = entry.getKey();
-
-            Connection con = entry.getValue();
-
-            try (Statement st = con.createStatement())
-            {
-                JSONArray arr = new JSONArray();
-
-                String query = key.equals(DbConfig.getPortfolioKey()) ? PortfolioDbQuery.getRetrieveAllProjects() : AnnotationQuery.getRetrieveAllProjects();
-
-                ResultSet rs = st.executeQuery(query);
-
-                if (key.equals(DbConfig.getPortfolioKey()))
-                {
-                    while (rs.next())
-                    {
-                        Integer projectID = rs.getInt(1);
-                        List<Integer> UUIDIntList = ConversionHandler.string2IntegerList(rs.getString(6));
-
-                        List<String> UUIDList = integerList2StringListWithMap(UUIDIntList, projectUUIDDict.get(projectID));
-
-                        arr.put(new JSONObject()
-                                .put(ParamConfig.getProjectIdParam(), projectIDDict.get(projectID))
-                                .put(ParamConfig.getProjectNameParam(), rs.getString(2))
-                                .put(ParamConfig.getAnnotationTypeParam(), rs.getInt(3))
-                                .put(ParamConfig.getLabelListParam(), rs.getString(4))
-                                .put(ParamConfig.getUuidListParam(), UUIDList));
-                    }
-                }
-                else
-                {
-                    while (rs.next())
-                    {
-                        Integer projectIDInt = rs.getInt(2);
-                        Integer uuidInt = rs.getInt(1);
-
-                        arr.put(new JSONObject()
-                                .put(ParamConfig.getUuidParam(), projectUUIDDict.get(projectIDInt).get(uuidInt))
-                                .put(ParamConfig.getProjectIdParam(), projectIDDict.get(projectIDInt))
-                                .put(ParamConfig.getImgPathParam(), rs.getString(3))
-                                .put(ParamConfig.getProjectContentParam(), rs.getString(4))
-                                .put(ParamConfig.getImgDepth(), rs.getInt(5))
-                                .put(ParamConfig.getImgXParam(), rs.getInt(6))
-                                .put(ParamConfig.getImgYParam(), rs.getInt(7))
-                                .put(ParamConfig.getImgWParam(), rs.getDouble(8))
-                                .put(ParamConfig.getImgHParam(), rs.getDouble(9))
-                                .put(ParamConfig.getImgOriWParam(), rs.getInt(10))
-                                .put(ParamConfig.getImgOriHParam(), rs.getInt(11)));
-                    }
-                }
-
-                File file = new File(tempJsonDict.get(key));
-
-                if (!file.exists() && !file.createNewFile())
-                {
-                    log.debug("Unable to create file " + file.getName());
-                }
-
-                writeJsonToFile(file, arr);
-            }
-            catch (Exception e)
-            {
-                log.debug("Fail to write to JSON: " + e);
-            }
-        }
-
-    }
-
-    private void json2H2()
-    {
-        for (Map.Entry<String, Connection> entry : h2ConnDict.entrySet())
-        {
-            String key = entry.getKey();
-
-            Connection con = entry.getValue();
-
-            File file = new File(tempJsonDict.get(key));
-            String query = key.equals(DbConfig.getPortfolioKey()) ? PortfolioDbQuery.getCreateNewProject() : AnnotationQuery.getCreateData();
-
-            try
-            (
-                InputStream is = new FileInputStream(file);
-                PreparedStatement st = con.prepareStatement(query)
-            )
-            {
-                JSONTokener tokener = new JSONTokener(is);
-                JSONArray arr = new JSONArray(tokener);
-
-                if(key.equals(DbConfig.getPortfolioKey()))
-                {
-                    for(int i = 0; i < arr.length(); ++i)
-                    {
-                        JSONObject obj = arr.getJSONObject(i);
-
-                        st.setString(1, obj.getString(ParamConfig.getProjectIdParam()));
-                        st.setString(2, obj.getString(ParamConfig.getProjectNameParam()));
-                        st.setInt(3, obj.getInt(ParamConfig.getAnnotationTypeParam()));
-                        st.setString(4, obj.getString(ParamConfig.getLabelListParam()));
-                        st.setString(5, obj.getJSONArray(ParamConfig.getUuidListParam()).toString());
-                        st.setBoolean(6, false);
-                        st.setBoolean(7, false);
-                        st.setString(8, new DateTime().toString()); //changed created date of old projects to current date of migration
-
-
-                        st.executeUpdate();
-                        st.clearParameters();
-                    }
-                }
-                else
-                {
-                    for(int i = 0; i < arr.length(); ++i)
-                    {
-                        JSONObject obj = arr.getJSONObject(i);
-
-                        st.setString(1, obj.getString(ParamConfig.getUuidParam()));
-                        st.setString(2, obj.getString(ParamConfig.getProjectIdParam()));
-                        st.setString(3, obj.getString(ParamConfig.getImgPathParam()));
-                        st.setString(4, obj.getString(ParamConfig.getProjectContentParam()));
-                        st.setInt(5, obj.getInt(ParamConfig.getImgDepth()));
-                        st.setInt(6, obj.getInt(ParamConfig.getImgXParam()));
-                        st.setInt(7, obj.getInt(ParamConfig.getImgYParam()));
-                        st.setDouble(8, obj.getDouble(ParamConfig.getImgWParam()));
-                        st.setDouble(9, obj.getDouble(ParamConfig.getImgHParam()));
-                        st.setInt(10, obj.getInt(ParamConfig.getImgOriWParam()));
-                        st.setInt(11, obj.getInt(ParamConfig.getImgOriHParam()));
-
-                        st.executeUpdate();
-                        st.clearParameters();
-                    }
-                }
-
-            }
-            catch (Exception e)
-            {
-                log.debug("Fail to write to H2: " + e);
-            }
-        }
-    }
-
-
-    private static void selectiveDelete(String folderName, String pathOmitted)
+    private void selectiveDelete(String folderName, String path, boolean skipOrDelete)
     {
         File folder = new File(folderName);
 
@@ -408,7 +316,7 @@ public class DbMigration
         {
             for (File file: folder.listFiles())
             {
-                if (!file.getAbsolutePath().equals(pathOmitted))
+                if (file.getAbsolutePath().equals(path) ^ skipOrDelete)
                 {
                     FileHandler.deleteFile(file);
                 }
@@ -420,7 +328,7 @@ public class DbMigration
         }
     }
 
-    private static void closeConnection(List<Connection> connection)
+    private void closeConnection(List<Connection> connection)
     {
         for(Connection conn : connection)
         {

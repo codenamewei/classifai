@@ -16,6 +16,7 @@
 package ai.classifai.database;
 
 import ai.classifai.database.migration.DbMigration;
+import ai.classifai.database.migration.HsqlToH2DbMigration;
 import ai.classifai.ui.SelectionWindow;
 import ai.classifai.util.data.FileHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -37,25 +38,28 @@ public class DbOps {
         throw new IllegalStateException("DbOps class");
     }
 
-    public static void configureDatabase() {
-        migrateDbIfExist();
-
-        setupDb();
+    // perform migration (if required) and database setup
+    // return false only when migration aborted
+    public static boolean configureDatabase() {
+        if (migrateDbIfExist())
+        {
+            setupDb();
+            return true;
+        }
+        return false;
     }
 
-    //hsqldb v1 -> h2 v2 database migration
-    private static void migrateDbIfExist() {
+    // database migration
+    // return false only when migration aborted
+    private static boolean migrateDbIfExist()
+    {
         if (DbConfig.getHsql().isDbExist() && !DbConfig.getH2().isDbExist()) {
             log.info("Database migration required. Executing database migration.");
-
-            if (!new DbMigration().migrate()) {
-                log.info("Database migration failed. Old data will not be migrated. You can choose to move on with empty database, or close Classifai now to prevent data lost.");
-            } else {
-                log.info("Database migration is successful!");
-            }
+            return new HsqlToH2DbMigration().migrate();
         } else {
             log.debug("Database migration did not initiated");
         }
+        return true;
     }
 
     private static void setupDb()

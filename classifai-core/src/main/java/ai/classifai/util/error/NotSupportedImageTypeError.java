@@ -13,22 +13,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package ai.classifai.util.type;
+package ai.classifai.util.error;
 
 /**
- * Types of Annotation
+ * Exception thrown when data type is not supported
  *
- * @author codenamewei
+ * @author YCCertifai
  */
-public enum AnnotationType
-{
-    BOUNDINGBOX,
-    SEGMENTATION;
-    //ADD WHEN HAVE NEW ANNOTATION TYPE
+public class NotSupportedImageTypeError extends Exception{
 
-    public static String getByInt(int integer)
+    public NotSupportedImageTypeError(String message)
     {
-        return AnnotationType.values()[integer].name();
+        super(message);
     }
 }
-

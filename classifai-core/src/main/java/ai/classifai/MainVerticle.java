@@ -56,11 +56,16 @@ public class MainVerticle extends AbstractVerticle
     }
 
     @Override
-    public void start(Promise<Void> promise)
-    {
+    public void start(Promise<Void> promise) throws Exception {
         if(!ParamConfig.isDockerEnv()) LookFeelSetter.setDarkMode(); //to align dark mode for windows
 
-        DbOps.configureDatabase();
+        // if user refuse to migrate, classifai will be revert to v1 and shut down.
+        if (!DbOps.configureDatabase())
+        {
+            log.info("Classifai stopped due to user refused to migrate.");
+            this.stop(promise);
+            System.exit(0);
+        }
 
         if (!ParamConfig.isDockerEnv()) WelcomeLauncher.start();
 
@@ -142,7 +147,7 @@ public class MainVerticle extends AbstractVerticle
     }
 
     @Override
-    public void stop(Promise<Void> promise) throws Exception
+    public void stop(Promise<Void> promise)
     {
         vertx.close( r -> {if(r.succeeded()){
             log.info("Classifai close successfully");
