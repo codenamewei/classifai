@@ -1,0 +1,3 @@
+[submodule "classifai-core/src/main/resources/webroot"]
+	path = classifai-core/src/main/resources/webroot
+	url = https://github.com/CertifaiAI/Classifai_FrontEnd_Dist.git
