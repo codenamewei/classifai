@@ -1,6 +1,5 @@
-package util.collection;
+package ai.classifai.util.collection;
 
-import ai.classifai.util.collection.ConversionHandler;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package util.data;
+package ai.classifai.util.data;
 
 import ai.classifai.data.type.image.ImageFileType;
 import ai.classifai.util.data.FileHandler;

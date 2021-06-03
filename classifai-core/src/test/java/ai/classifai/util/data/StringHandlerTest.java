@@ -1,4 +1,4 @@
-package util.data;
+package ai.classifai.util.data;
 
 import ai.classifai.util.data.StringHandler;
 import org.junit.jupiter.api.Assertions;
