@@ -95,7 +95,7 @@ public class ProjectFolderSelector extends SelectionWindow {
         }
     }
 
-    private ProjectLoader configureLoader(@NonNull String projectName, @NonNull Integer annotationInt, @NonNull File rootPath)
+    public ProjectLoader configureLoader(@NonNull String projectName, @NonNull Integer annotationInt, @NonNull File rootPath)
     {
         if (ProjectHandler.isProjectNameUnique(projectName, annotationInt))
         {
