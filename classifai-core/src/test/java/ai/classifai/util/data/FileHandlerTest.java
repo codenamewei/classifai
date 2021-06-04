@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.util.List;
@@ -35,7 +36,7 @@ public class FileHandlerTest {
     @DisplayName("Iterate folder fail case")
     void testProcessFolderFail(File rootPath, String[] extensionFormat, int testCorrectValue) {
         List<File> outputList =  FileHandler.processFolder(rootPath, extensionFormat);
-        // Value should not be equal to number of files in the input rootpath
+        // Value should not be equal to number of files in the input rootPath
         Assertions.assertNotEquals(outputList.size(), testCorrectValue);
     }
 
@@ -49,19 +50,10 @@ public class FileHandlerTest {
     }
 
     @Test
+    @ValueSource(strings = {"image.jpg", "path/to/my/image.jpg"})
     @DisplayName("Check supported file")
-    void testIsFileSupported()
+    void testIsFileSupported(String fileName)
     {
-        String fileName = "image.jpg";
-        boolean result = FileHandler.isFileSupported(fileName, ImageFileType.getImageFileTypes());
-        Assertions.assertTrue(result);
-    }
-
-    @Test
-    @DisplayName("Check supported file directory string")
-    void testIsFileSupportedDirectoryString()
-    {
-        String fileName = "path/to/my/image.jpg";
         boolean result = FileHandler.isFileSupported(fileName, ImageFileType.getImageFileTypes());
         Assertions.assertTrue(result);
     }
