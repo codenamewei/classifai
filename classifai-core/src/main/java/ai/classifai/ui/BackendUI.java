@@ -1,4 +1,3 @@
-package ai.classifai.ui;
 /*
  * Copyright (c) 2021 CertifAI Sdn. Bhd.
  *
@@ -14,8 +13,8 @@ package ai.classifai.ui;
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+package ai.classifai.ui;
 
-import ai.classifai.ui.SelectionWindow;
 import ai.classifai.ui.launcher.LogoLauncher;
 import ai.classifai.ui.launcher.WelcomeLauncher;
 import lombok.Getter;
@@ -34,7 +33,7 @@ import static javax.swing.JOptionPane.showMessageDialog;
  * @author YCCertifai
  */
 @Slf4j
-public abstract class BackendUI
+public abstract class BackendUI extends JPanel
 {
     private static final JFrame frame = initFrame();
 

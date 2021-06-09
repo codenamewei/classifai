@@ -21,6 +21,7 @@ import ai.classifai.ui.BackendUI;
 import ai.classifai.ui.launcher.LogoLauncher;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.type.FileFormat;
+import com.formdev.flatlaf.FlatDarkLaf;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -48,7 +49,7 @@ import java.io.File;
 public class ConverterLauncher extends BackendUI
 {
     @Getter @Setter
-    private static FileSystemStatus fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED;
+    private static FileSystemStatus fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_UPDATED;
 
     private static ConverterFolderSelector folderSelector;
 
@@ -70,11 +71,11 @@ public class ConverterLauncher extends BackendUI
     private JLabel inputFolderLabel =  new JLabel("Input Folder     : ");
     private JLabel outputFolderLabel = new JLabel("Output Folder  : ");
 
-    private static JButton inputBrowserButton;
-    private static JButton outputBrowserButton;
+    private static JButton inputBrowserButton = new JButton("Browse");
+    private static JButton outputBrowserButton = new JButton("Browse");
 
-    private static JComboBox inputFormatCombo;
-    private static JComboBox outputFormatCombo;
+    private static JComboBox<String> inputFormatCombo;
+    private static JComboBox<String> outputFormatCombo;
 
     private static InputFolderListener inputFolderListener;
     private static OutputFolderListener outputFolderListener;
@@ -82,7 +83,7 @@ public class ConverterLauncher extends BackendUI
     private JLabel maxPage = new JLabel("Maximum Page: ");
     private JTextField maxPageTextField = new JTextField();
 
-    @Getter private static JTextArea taskOutput;
+    @Getter private static JTextArea taskOutput = new JTextArea(105, 20);;
     private JScrollPane progressPane;
 
     private JProgressBar progressBar = new JProgressBar(0, 100);
@@ -95,25 +96,6 @@ public class ConverterLauncher extends BackendUI
 
     static
     {
-        String gap = "   ";
-        String[] inputFormat = new String[] {
-                gap + FileFormat.PDF.getUpperCase(),
-                gap + FileFormat.TIF.getUpperCase()
-        };
-
-        String[] outputFormat = new String[] {
-                gap + FileFormat.JPG.getUpperCase(),
-                gap + FileFormat.PNG.getUpperCase()
-        };
-
-        inputFormatCombo = new JComboBox(inputFormat);
-        outputFormatCombo = new JComboBox(outputFormat);
-
-        inputBrowserButton = new JButton("Browse");
-        outputBrowserButton = new JButton("Browse");
-
-        taskOutput = new JTextArea(105, 20);
-
         isOpened = false;
 
         Thread inputFolderThread = new Thread(() -> folderSelector = new ConverterFolderSelector());
@@ -164,7 +146,7 @@ public class ConverterLauncher extends BackendUI
             public void windowOpened(WindowEvent e)
             {
                 super.windowOpened(e);
-                windowStatus = WindowStatus.WINDOW_OPEN;
+//                windowStatus = WindowStatus.WINDOW_OPEN;
                 fileSystemStatus = FileSystemStatus.WINDOW_OPEN;
                 isOpened = true;
             }
@@ -173,17 +155,13 @@ public class ConverterLauncher extends BackendUI
             public void windowClosing(WindowEvent e)
             {
                 isOpened = false;
-                windowStatus = WindowStatus.WINDOW_CLOSE;
+//                windowStatus = WindowStatus.WINDOW_CLOSE;
+                fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_UPDATED;
 
                 if (task != null)
                 {
-                    fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_UPDATED;
                     Task.stop();
                     task.cancel(true);
-                }
-                else
-                {
-                    fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED;
                 }
             }
         });
@@ -254,8 +232,11 @@ public class ConverterLauncher extends BackendUI
 
     private void configure()
     {
-        inputFormatCombo.setSelectedIndex(0);
-        outputFormatCombo.setSelectedIndex(1);
+        String[] input = {FileFormat.PDF.getUpperCase(), FileFormat.TIFF.getUpperCase()};
+        inputFormatCombo = new JComboBox<>(input);
+
+        String[] output = {FileFormat.JPEG.getUpperCase(), FileFormat.PNG.getUpperCase()};
+        outputFormatCombo = new JComboBox<>(output);
 
         design(inputFolderLabel);
         design(outputFolderLabel);
@@ -271,19 +252,20 @@ public class ConverterLauncher extends BackendUI
         outputFolderField.setText(getDefaultOutputPath());
         outputFolderField.setMinimumSize(folderDimension);
 
-        design(inputBrowserButton);
         if (inputFolderListener == null)
         {
             inputFolderListener = new InputFolderListener();
             inputBrowserButton.addActionListener(inputFolderListener);
         }
 
-        design(outputBrowserButton);
         if (outputFolderListener == null)
         {
             outputFolderListener = new OutputFolderListener();
             outputBrowserButton.addActionListener(outputFolderListener);
         }
+
+        design(inputBrowserButton);
+        design(outputBrowserButton);
 
         design(inputFormatCombo);
         design(outputFormatCombo);
@@ -326,7 +308,6 @@ public class ConverterLauncher extends BackendUI
 
             JTextField textField = (JTextField) obj;
             textField.setFont(font);
-            textField.setBackground(Color.DARK_GRAY);
             textField.setEditable(false);
         }
         else if (obj instanceof JButton)
@@ -406,21 +387,29 @@ public class ConverterLauncher extends BackendUI
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                if (windowStatus.equals(WindowStatus.WINDOW_CLOSE))
-                {
                     configure();
                     start();
-
+                    frame.setAlwaysOnTop(true);
                     frame.setVisible(true);
-                }
-                else
-                {
-                    showAbortImportPopup();
-                    fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED;
-                }
+//                if (windowStatus.equals(WindowStatus.WINDOW_CLOSE))
+//                {
+//                    configure();
+//                    start();
+//                    frame.setAlwaysOnTop(true);
+//                    frame.setVisible(true);
+//                }
+//                else
+//                {
+//                    showAbortImportPopup();
+//                    fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED;
+//                }
 
             }
+
         });
+    }
+
+    private void setToFront() {
     }
 
     public static void appendTaskOutput(@NonNull String message)

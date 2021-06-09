@@ -25,6 +25,7 @@ import ai.classifai.selector.project.ProjectFolderSelector;
 import ai.classifai.selector.project.ProjectImportSelector;
 import ai.classifai.ui.launcher.conversion.ConverterLauncher;
 import ai.classifai.util.ParamConfig;
+import ai.classifai.util.SystemHandler;
 import ai.classifai.util.http.HTTPResponseHandler;
 import ai.classifai.util.message.ErrorCodes;
 import ai.classifai.util.message.ReplyHandler;
@@ -33,6 +34,7 @@ import ai.classifai.util.type.AnnotationHandler;
 import ai.classifai.util.type.AnnotationType;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import lombok.Setter;
@@ -487,13 +489,43 @@ public class V2Endpoint {
 //            converterLauncher = new ConverterLauncher();//to prevent any lingering tasks
     }
 
+
     /**
-     * Get load label file status
-     * GET http://localhost:{port}/v2/labelfilestatus
+     * Get file conversion status
+     * GET http://localhost:{port}/v2/fileconversionstatus
      *
      * Example:
-     * GET http://localhost:{port}/v2/labelfilestatus
+     * GET http://localhost:{port}/v2/fileconversionstatus
      */
-    public void getLogs(RoutingContext routingContext) {
+    public void fileConversionStatus(RoutingContext context)
+    {
+        util.checkIfDockerEnv(context);
+
+        FileSystemStatus currentStatus = ConverterLauncher.getFileSystemStatus();
+
+        JsonObject jsonResponse = new JsonObject().put(ReplyHandler.getMessageKey(), currentStatus.ordinal());
+
+        HTTPResponseHandler.configureOK(context, jsonResponse);
+    }
+
+    /**
+     * View log file from system
+     * GET http://localhost:{port}/v2/log
+     *
+     * Example:
+     * GET http://localhost:{port}/v2/log
+     */
+    public void getLogs(RoutingContext context)
+    {
+        boolean isOpened = SystemHandler.openLogFile();
+
+        JsonObject jsonResponse = ReplyHandler.getOkReply();
+
+        if (!isOpened)
+        {
+            jsonResponse = ReplyHandler.reportUserDefinedError("Failed to open log file");
+        }
+
+        HTTPResponseHandler.configureOK(context, jsonResponse);
     }
 }

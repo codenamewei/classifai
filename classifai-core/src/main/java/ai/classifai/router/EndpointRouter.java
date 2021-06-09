@@ -156,6 +156,8 @@ public class EndpointRouter extends AbstractVerticle
 
         router.get("/v2/fileformatconverter").handler(v2::convertFileFormat);
 
+        router.get("/v2/fileconversionstatus").handler(v2::fileConversionStatus);
+
         router.get("/v2/log").handler(v2::getLogs);
 
         //*******************************Cloud*******************************
