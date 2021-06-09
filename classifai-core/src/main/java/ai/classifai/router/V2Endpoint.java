@@ -23,6 +23,7 @@ import ai.classifai.selector.filesystem.FileSystemStatus;
 import ai.classifai.selector.project.LabelListSelector;
 import ai.classifai.selector.project.ProjectFolderSelector;
 import ai.classifai.selector.project.ProjectImportSelector;
+import ai.classifai.ui.launcher.conversion.ConverterLauncher;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.http.HTTPResponseHandler;
 import ai.classifai.util.message.ErrorCodes;
@@ -51,6 +52,7 @@ public class V2Endpoint {
     @Setter private ProjectFolderSelector projectFolderSelector = null;
     @Setter private ProjectImportSelector projectImporter = null;
     @Setter private LabelListSelector labelListSelector = null;
+    @Setter private ConverterLauncher converterLauncher = null;
 
     Util util = new Util();
 
@@ -423,9 +425,9 @@ public class V2Endpoint {
     {
         if(labelListSelector.isWindowOpen())
         {
-            JsonObject jsonResonse = ReplyHandler.reportUserDefinedError("Label list selector window has already opened. CLose that to proceed.");
+            JsonObject jsonResponse = ReplyHandler.reportUserDefinedError("Label list selector window has already opened. Close that to proceed.");
 
-            HTTPResponseHandler.configureOK(context, jsonResonse);
+            HTTPResponseHandler.configureOK(context, jsonResponse);
         }
         else
         {
@@ -459,5 +461,39 @@ public class V2Endpoint {
         }
 
         HTTPResponseHandler.configureOK(context, jsonResponse);
+    }
+
+    /**
+     * Initiate file format converting windows
+     * GET http://localhost:{port}/v2/fileformatconverter
+     *
+     * Example:
+     * GET http://localhost:{port}/v2/fileformatconverter
+     */
+    public void convertFileFormat(RoutingContext context)
+    {
+        if (ConverterLauncher.isOpened())
+        {
+            JsonObject jsonResponse = ReplyHandler.reportUserDefinedError("Files format converter window has already opened. Close that to proceed.");
+
+            HTTPResponseHandler.configureOK(context, jsonResponse);
+        }
+        else
+        {
+            HTTPResponseHandler.configureOK(context);
+
+        }
+        converterLauncher.launch();
+//            converterLauncher = new ConverterLauncher();//to prevent any lingering tasks
+    }
+
+    /**
+     * Get load label file status
+     * GET http://localhost:{port}/v2/labelfilestatus
+     *
+     * Example:
+     * GET http://localhost:{port}/v2/labelfilestatus
+     */
+    public void getLogs(RoutingContext routingContext) {
     }
 }

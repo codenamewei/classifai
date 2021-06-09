@@ -60,9 +60,9 @@ public class LabelListSelector extends SelectionWindow
         {
             EventQueue.invokeLater(() -> {
 
-                if(windowStatus.equals(ImportSelectionWindowStatus.WINDOW_CLOSE))
+                if(windowStatus.equals(WindowStatus.WINDOW_CLOSE))
                 {
-                    windowStatus = ImportSelectionWindowStatus.WINDOW_OPEN;
+                    windowStatus = WindowStatus.WINDOW_OPEN;
                     setImportLabelFileSystemStatus(FileSystemStatus.WINDOW_OPEN);
 
                     JFrame frame = initFrame();
@@ -102,7 +102,7 @@ public class LabelListSelector extends SelectionWindow
                         log.debug("Operation of import project aborted");
                     }
 
-                    windowStatus = ImportSelectionWindowStatus.WINDOW_CLOSE;
+                    windowStatus = WindowStatus.WINDOW_CLOSE;
 
                 }
                 else

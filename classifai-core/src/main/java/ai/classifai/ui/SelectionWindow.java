@@ -15,11 +15,7 @@
  */
 package ai.classifai.ui;
 
-import ai.classifai.ui.launcher.LogoLauncher;
-import ai.classifai.ui.launcher.WelcomeLauncher;
 import ai.classifai.util.ParamConfig;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
@@ -33,40 +29,8 @@ import static javax.swing.JOptionPane.showMessageDialog;
  * @author devenyantis
  */
 @Slf4j
-public class SelectionWindow {
-
-    public enum ImportSelectionWindowStatus
-    {
-        WINDOW_OPEN,
-        WINDOW_CLOSE
-    }
-
-    // To make sure window open once only
-    @Getter @Setter
-    public ImportSelectionWindowStatus windowStatus = ImportSelectionWindowStatus.WINDOW_CLOSE;
-
-    private static JFrame frame = initFrame();
-
-    public boolean isWindowOpen()
-    {
-        return windowStatus.equals(ImportSelectionWindowStatus.WINDOW_OPEN) ? true : false;
-    }
-
-    public static JFrame initFrame()
-    {
-        Point pt = MouseInfo.getPointerInfo().getLocation();
-        JFrame frame = new JFrame();
-        frame.setIconImage(LogoLauncher.getClassifaiIcon());
-
-        frame.setAlwaysOnTop(true);
-        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        frame.setLocation(pt);
-        frame.requestFocus();
-        frame.setVisible(false);
-
-        return frame;
-    }
-
+public class SelectionWindow extends BackendUI
+{
     public static JFileChooser initChooser(int mode, String title)
     {
         JFileChooser chooser = new JFileChooser() {
@@ -87,19 +51,5 @@ public class SelectionWindow {
         chooser.setAcceptAllFileFilterUsed(false);
 
         return chooser;
-    }
-
-    public static void showPopupAndLog(String title, String message, int popupType)
-    {
-        log.debug(message);
-        WelcomeLauncher.setToBackground();
-        showMessageDialog(frame, message, title, popupType);
-    }
-
-    public void showAbortImportPopup()
-    {
-        String popupTitle = "Error Opening Window";
-        String message = "Another selection window is currently open. Please close to proceed.";
-        SelectionWindow.showPopupAndLog(popupTitle, message, JOptionPane.ERROR_MESSAGE);
     }
 }

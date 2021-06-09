@@ -56,9 +56,9 @@ public class ProjectImportSelector extends SelectionWindow {
         {
             EventQueue.invokeLater(() -> {
                 clearImportErrorMessage();
-                if(windowStatus.equals(ImportSelectionWindowStatus.WINDOW_CLOSE))
+                if(windowStatus.equals(WindowStatus.WINDOW_CLOSE))
                 {
-                    windowStatus = ImportSelectionWindowStatus.WINDOW_OPEN;
+                    windowStatus = WindowStatus.WINDOW_OPEN;
                     setImportFileSystemStatus(FileSystemStatus.WINDOW_OPEN);
 
                     JFrame frame = initFrame();
@@ -89,7 +89,7 @@ public class ProjectImportSelector extends SelectionWindow {
                     setImportFileSystemStatus(FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED);
                 }
 
-                windowStatus = ImportSelectionWindowStatus.WINDOW_CLOSE;
+                windowStatus = WindowStatus.WINDOW_CLOSE;
 
             });
         }

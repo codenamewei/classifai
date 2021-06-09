@@ -20,6 +20,7 @@ import ai.classifai.database.portfolio.PortfolioVerticle;
 import ai.classifai.selector.project.LabelListSelector;
 import ai.classifai.selector.project.ProjectFolderSelector;
 import ai.classifai.selector.project.ProjectImportSelector;
+import ai.classifai.ui.launcher.conversion.ConverterLauncher;
 import ai.classifai.util.ParamConfig;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -40,6 +41,7 @@ public class EndpointRouter extends AbstractVerticle
     private ProjectImportSelector projectImporter;
     private LabelListSelector labelListSelector;
     private FileGenerator fileGenerator;
+    private ConverterLauncher converterLauncher;
 
 
     V1Endpoint v1 = new V1Endpoint();
@@ -60,6 +62,9 @@ public class EndpointRouter extends AbstractVerticle
 
         Thread threadZipFileGenerator = new Thread(() -> fileGenerator = new FileGenerator());
         threadZipFileGenerator.start();
+
+        Thread fileFormatConversion = new Thread(() -> converterLauncher = new ConverterLauncher());
+        fileFormatConversion.start();
     }
 
     @Override
@@ -78,6 +83,7 @@ public class EndpointRouter extends AbstractVerticle
         v2.setProjectImporter(projectImporter);
 
         v2.setLabelListSelector(labelListSelector);
+        v2.setConverterLauncher(converterLauncher);
 
         cloud.setVertx(vertx);
 
@@ -147,6 +153,10 @@ public class EndpointRouter extends AbstractVerticle
         router.put("/v2/labelfile").handler(v2::loadLabelFile);
 
         router.get("/v2/labelfilestatus").handler(v2::loadLabelFileStatus);
+
+        router.get("/v2/fileformatconverter").handler(v2::convertFileFormat);
+
+        router.get("/v2/log").handler(v2::getLogs);
 
         //*******************************Cloud*******************************
 
