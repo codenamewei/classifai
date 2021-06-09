@@ -21,7 +21,6 @@ import ai.classifai.ui.BackendUI;
 import ai.classifai.ui.launcher.LogoLauncher;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.type.FileFormat;
-import com.formdev.flatlaf.FlatDarkLaf;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
