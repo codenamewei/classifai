@@ -145,7 +145,7 @@ public class ConverterLauncher extends BackendUI
             public void windowOpened(WindowEvent e)
             {
                 super.windowOpened(e);
-//                windowStatus = WindowStatus.WINDOW_OPEN;
+                windowStatus = WindowStatus.WINDOW_OPEN;
                 fileSystemStatus = FileSystemStatus.WINDOW_OPEN;
                 isOpened = true;
             }
@@ -154,7 +154,7 @@ public class ConverterLauncher extends BackendUI
             public void windowClosing(WindowEvent e)
             {
                 isOpened = false;
-//                windowStatus = WindowStatus.WINDOW_CLOSE;
+                windowStatus = WindowStatus.WINDOW_CLOSE;
                 fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_UPDATED;
 
                 if (task != null)
@@ -386,29 +386,22 @@ public class ConverterLauncher extends BackendUI
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
+                if (windowStatus.equals(WindowStatus.WINDOW_CLOSE))
+                {
                     configure();
                     start();
                     frame.setAlwaysOnTop(true);
                     frame.setVisible(true);
-//                if (windowStatus.equals(WindowStatus.WINDOW_CLOSE))
-//                {
-//                    configure();
-//                    start();
-//                    frame.setAlwaysOnTop(true);
-//                    frame.setVisible(true);
-//                }
-//                else
-//                {
-//                    showAbortImportPopup();
-//                    fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED;
-//                }
+                }
+                else
+                {
+                    showAbortImportPopup();
+                    fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED;
+                }
 
             }
 
         });
-    }
-
-    private void setToFront() {
     }
 
     public static void appendTaskOutput(@NonNull String message)

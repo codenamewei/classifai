@@ -32,7 +32,7 @@ import static javax.swing.JOptionPane.showMessageDialog;
  * @author YCCertifai
  */
 @Slf4j
-public abstract class BackendUI extends JPanel
+public abstract class BackendUI
 {
     private static final JFrame frame = initFrame();
 
