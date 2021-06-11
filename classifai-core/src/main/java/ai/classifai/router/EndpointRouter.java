@@ -160,9 +160,9 @@ public class EndpointRouter extends AbstractVerticle
 
         router.get(projectV2Endpoint).handler(v2::createProjectStatus);
 
-        router.get("/v2/fileformatconverter").handler(v2::convertFileFormat);
+        router.put("/v2/fileformatconverter").handler(v2::initFileConversion);
 
-        router.get("/v2/fileconversionstatus").handler(v2::fileConversionStatus);
+        router.get("/v2/fileformatconverter").handler(v2::fileConversionStatus);
 
         router.get("/v2/log").handler(v2::getLogs);
 

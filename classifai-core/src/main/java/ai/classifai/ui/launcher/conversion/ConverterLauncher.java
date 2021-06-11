@@ -16,7 +16,7 @@
 package ai.classifai.ui.launcher.conversion;
 
 import ai.classifai.selector.conversion.ConverterFolderSelector;
-import ai.classifai.selector.filesystem.FileSystemStatus;
+import ai.classifai.selector.status.BackendWindowStatus;
 import ai.classifai.ui.BackendUI;
 import ai.classifai.ui.launcher.LogoLauncher;
 import ai.classifai.util.ParamConfig;
@@ -24,7 +24,6 @@ import ai.classifai.util.type.FileFormat;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
@@ -47,9 +46,6 @@ import java.io.File;
 @NoArgsConstructor
 public class ConverterLauncher extends BackendUI
 {
-    @Getter @Setter
-    private static FileSystemStatus fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_UPDATED;
-
     private static ConverterFolderSelector folderSelector;
 
     @Getter private static boolean isOpened;
@@ -145,8 +141,7 @@ public class ConverterLauncher extends BackendUI
             public void windowOpened(WindowEvent e)
             {
                 super.windowOpened(e);
-                windowStatus = WindowStatus.WINDOW_OPEN;
-                fileSystemStatus = FileSystemStatus.WINDOW_OPEN;
+                windowStatus = BackendWindowStatus.WINDOW_OPEN;
                 isOpened = true;
             }
 
@@ -154,8 +149,7 @@ public class ConverterLauncher extends BackendUI
             public void windowClosing(WindowEvent e)
             {
                 isOpened = false;
-                windowStatus = WindowStatus.WINDOW_CLOSE;
-                fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_UPDATED;
+                windowStatus = BackendWindowStatus.WINDOW_CLOSE;
 
                 if (task != null)
                 {
@@ -307,6 +301,7 @@ public class ConverterLauncher extends BackendUI
 
             JTextField textField = (JTextField) obj;
             textField.setFont(font);
+            textField.setBackground(Color.DARK_GRAY);
             textField.setEditable(false);
         }
         else if (obj instanceof JButton)
@@ -386,7 +381,7 @@ public class ConverterLauncher extends BackendUI
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                if (windowStatus.equals(WindowStatus.WINDOW_CLOSE))
+                if (windowStatus.equals(BackendWindowStatus.WINDOW_CLOSE))
                 {
                     configure();
                     start();
@@ -395,8 +390,7 @@ public class ConverterLauncher extends BackendUI
                 }
                 else
                 {
-                    showAbortImportPopup();
-                    fileSystemStatus = FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED;
+                    showAbortPopup();
                 }
 
             }

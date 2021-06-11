@@ -20,7 +20,7 @@ package ai.classifai.selector.status;
  *
  * @author codenamewei
  */
-public enum SelectionWindowStatus
+public enum BackendWindowStatus
 {
     WINDOW_OPEN,
     WINDOW_CLOSE

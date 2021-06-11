@@ -15,8 +15,11 @@
  */
 package ai.classifai.ui;
 
+import ai.classifai.selector.status.BackendWindowStatus;
 import ai.classifai.ui.launcher.LogoLauncher;
 import ai.classifai.ui.launcher.WelcomeLauncher;
+import ai.classifai.util.message.ReplyHandler;
+import io.vertx.core.json.JsonObject;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -35,17 +38,13 @@ import static javax.swing.JOptionPane.showMessageDialog;
 public abstract class BackendUI
 {
     private static final JFrame frame = initFrame();
+    private static final String failedMessage = "Another window is currently open. Please close to proceed.";
 
-    protected enum WindowStatus
-    {
-        WINDOW_OPEN,
-        WINDOW_CLOSE
-    }
 
     // To make sure window open once only
     @Getter
     @Setter
-    protected WindowStatus windowStatus = WindowStatus.WINDOW_CLOSE;
+    protected BackendWindowStatus windowStatus = BackendWindowStatus.WINDOW_CLOSE;
 
     public static JFrame initFrame()
     {
@@ -64,7 +63,7 @@ public abstract class BackendUI
 
     public boolean isWindowOpen()
     {
-        return windowStatus.equals(WindowStatus.WINDOW_OPEN);
+        return windowStatus.equals(BackendWindowStatus.WINDOW_OPEN);
     }
 
     public static void showPopupAndLog(String title, String message, int popupType)
@@ -74,10 +73,21 @@ public abstract class BackendUI
         showMessageDialog(frame, message, title, popupType);
     }
 
-    public void showAbortImportPopup()
+    public void showAbortPopup()
     {
         String popupTitle = "Error Opening Window";
-        String message = "Another window is currently open. Please close to proceed.";
-        SelectionWindow.showPopupAndLog(popupTitle, message, JOptionPane.ERROR_MESSAGE);
+        showPopupAndLog(popupTitle, failedMessage, JOptionPane.ERROR_MESSAGE);
+    }
+
+    public JsonObject reportWindowStatus()
+    {
+        JsonObject reply = ReplyHandler.getOkReply();
+
+        if (windowStatus.equals(BackendWindowStatus.WINDOW_OPEN))
+        {
+            reply = ReplyHandler.reportUserDefinedError(failedMessage);
+        }
+
+        return reply;
     }
 }

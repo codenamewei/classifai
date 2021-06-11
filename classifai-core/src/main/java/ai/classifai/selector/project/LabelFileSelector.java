@@ -15,7 +15,7 @@
  */
 package ai.classifai.selector.project;
 
-import ai.classifai.selector.status.SelectionWindowStatus;
+import ai.classifai.selector.status.BackendWindowStatus;
 import ai.classifai.ui.SelectionWindow;
 import ai.classifai.ui.launcher.WelcomeLauncher;
 import lombok.Setter;
@@ -50,9 +50,9 @@ public class LabelFileSelector extends SelectionWindow
         {
             EventQueue.invokeLater(() -> {
 
-                if(windowStatus.equals(SelectionWindowStatus.WINDOW_CLOSE))
+                if(windowStatus.equals(BackendWindowStatus.WINDOW_CLOSE))
                 {
-                    windowStatus = SelectionWindowStatus.WINDOW_OPEN;
+                    windowStatus = BackendWindowStatus.WINDOW_OPEN;
 
                     labelFile = null;
 
@@ -76,11 +76,11 @@ public class LabelFileSelector extends SelectionWindow
                         log.debug("Operation of import project aborted");
                     }
 
-                    windowStatus = SelectionWindowStatus.WINDOW_CLOSE;
+                    windowStatus = BackendWindowStatus.WINDOW_CLOSE;
                 }
                 else
                 {
-                    showAbortImportPopup();
+                    showAbortPopup();
                 }
             });
         }

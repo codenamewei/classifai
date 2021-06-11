@@ -18,7 +18,7 @@ package ai.classifai.selector.project;
 import ai.classifai.action.ActionConfig;
 import ai.classifai.action.ProjectImport;
 import ai.classifai.selector.status.FileSystemStatus;
-import ai.classifai.selector.status.SelectionWindowStatus;
+import ai.classifai.selector.status.BackendWindowStatus;
 import ai.classifai.ui.SelectionWindow;
 import ai.classifai.ui.launcher.WelcomeLauncher;
 import lombok.Getter;
@@ -57,9 +57,9 @@ public class ProjectImportSelector extends SelectionWindow {
         {
             EventQueue.invokeLater(() ->
             {
-                if(windowStatus.equals(SelectionWindowStatus.WINDOW_CLOSE))
+                if(windowStatus.equals(BackendWindowStatus.WINDOW_CLOSE))
                 {
-                    windowStatus = SelectionWindowStatus.WINDOW_OPEN;
+                    windowStatus = BackendWindowStatus.WINDOW_OPEN;
                     setImportFileSystemStatus(FileSystemStatus.ITERATING_FOLDER);
                     setProjectName(null);
 
@@ -76,23 +76,23 @@ public class ProjectImportSelector extends SelectionWindow {
 
                     if (res == JFileChooser.APPROVE_OPTION)
                     {
-                        windowStatus = SelectionWindowStatus.WINDOW_CLOSE;
+                        windowStatus = BackendWindowStatus.WINDOW_CLOSE;
                         File jsonFile =  chooser.getSelectedFile().getAbsoluteFile();
                         runApproveOption(jsonFile);
                     }
                     else
                     {
-                        windowStatus = SelectionWindowStatus.WINDOW_CLOSE;
+                        windowStatus = BackendWindowStatus.WINDOW_CLOSE;
                         setImportFileSystemStatus(FileSystemStatus.ABORTED);
                         log.debug("Operation of import project aborted");
                     }
                 }
                 else
                 {
-                    showAbortImportPopup();
+                    showAbortPopup();
                 }
 
-                windowStatus = SelectionWindowStatus.WINDOW_CLOSE;
+                windowStatus = BackendWindowStatus.WINDOW_CLOSE;
 
             });
         }

@@ -26,8 +26,10 @@ import ai.classifai.selector.project.LabelFileSelector;
 import ai.classifai.selector.project.ProjectFolderSelector;
 import ai.classifai.selector.project.ProjectImportSelector;
 import ai.classifai.selector.status.FileSystemStatus;
-import ai.classifai.selector.status.SelectionWindowStatus;
+import ai.classifai.selector.status.BackendWindowStatus;
+import ai.classifai.ui.launcher.conversion.ConverterLauncher;
 import ai.classifai.util.ParamConfig;
+import ai.classifai.util.SystemHandler;
 import ai.classifai.util.collection.UuidGenerator;
 import ai.classifai.util.http.HTTPResponseHandler;
 import ai.classifai.util.message.ReplyHandler;
@@ -56,6 +58,7 @@ public class V2Endpoint extends EndpointBase {
     @Setter private ProjectImportSelector projectImporter = null;
 
     @Setter private LabelFileSelector labelFileSelector = null;
+    @Setter private ConverterLauncher converterLauncher = null;
 
     /***
      * change is_load state of a project to false
@@ -387,16 +390,7 @@ public class V2Endpoint extends EndpointBase {
 
     public void importProject(RoutingContext context)
     {
-        if(projectImporter.isWindowOpen())
-        {
-            JsonObject jsonResonse = ReplyHandler.reportUserDefinedError("Import config file selector window has already opened. Close that to proceed.");
-
-            HTTPResponseHandler.configureOK(context, jsonResonse);
-        }
-        else
-        {
-            HTTPResponseHandler.configureOK(context);
-        }
+        HTTPResponseHandler.configureOK(context, projectImporter.reportWindowStatus());
 
         projectImporter.run();
     }
@@ -435,13 +429,9 @@ public class V2Endpoint extends EndpointBase {
     {
         helper.checkIfDockerEnv(context);
 
-        if(!labelFileSelector.isWindowOpen())
-        {
-            labelFileSelector.run();
+        HTTPResponseHandler.configureOK(context, labelFileSelector.reportWindowStatus());
 
-        }
-
-        HTTPResponseHandler.configureOK(context);
+        labelFileSelector.run();
     }
 
     /**
@@ -455,11 +445,11 @@ public class V2Endpoint extends EndpointBase {
     {
         helper.checkIfDockerEnv(context);
 
-        SelectionWindowStatus status = labelFileSelector.getWindowStatus();
+        BackendWindowStatus status = labelFileSelector.getWindowStatus();
 
-        JsonObject jsonResponse = compileSelectionWindowResponse(status);
+        JsonObject jsonResponse = compileBackendWindowResponse(status);
 
-        if(status.equals(SelectionWindowStatus.WINDOW_CLOSE))
+        if(status.equals(BackendWindowStatus.WINDOW_CLOSE))
         {
             jsonResponse.put(ParamConfig.getLabelPathParam(), labelFileSelector.getLabelFilePath());
         }
@@ -479,12 +469,10 @@ public class V2Endpoint extends EndpointBase {
     {
         helper.checkIfDockerEnv(context);
 
-        if(!projectFolderSelector.isWindowOpen())
-        {
-            projectFolderSelector.run();
+        HTTPResponseHandler.configureOK(context, projectFolderSelector.reportWindowStatus());
 
-        }
-        HTTPResponseHandler.configureOK(context);
+        projectFolderSelector.run();
+
     }
 
     /**
@@ -498,15 +486,68 @@ public class V2Endpoint extends EndpointBase {
     {
         helper.checkIfDockerEnv(context);
 
-        SelectionWindowStatus status = projectFolderSelector.getWindowStatus();
+        BackendWindowStatus status = projectFolderSelector.getWindowStatus();
 
-        JsonObject jsonResponse = compileSelectionWindowResponse(status);
+        JsonObject jsonResponse = compileBackendWindowResponse(status);
 
-        if(status.equals(SelectionWindowStatus.WINDOW_CLOSE))
+        if(status.equals(BackendWindowStatus.WINDOW_CLOSE))
         {
             jsonResponse.put(ParamConfig.getProjectPathParam(), projectFolderSelector.getProjectFolderPath());
         }
 
         HTTPResponseHandler.configureOK(context, jsonResponse);
+    }
+
+    /**
+     * Initiate file format converter
+     * PUT http://localhost:{port}/v2/fileformatconverter
+     *
+     * Example:
+     * PUT http://localhost:{port}/v2/fileformatconverter
+     */
+    public void initFileConversion(RoutingContext context)
+    {
+        helper.checkIfDockerEnv(context);
+
+        HTTPResponseHandler.configureOK(context, converterLauncher.reportWindowStatus());
+
+        converterLauncher.launch();
+    }
+
+    /**
+     * Initiate file format converter
+     * GET http://localhost:{port}/v2/fileformatconverter
+     *
+     * Example:
+     * GET http://localhost:{port}/v2/fileformatconverter
+     */
+    public void fileConversionStatus(RoutingContext context)
+    {
+        helper.checkIfDockerEnv(context);
+
+        BackendWindowStatus status = converterLauncher.getWindowStatus();
+
+        JsonObject jsonResponse = compileBackendWindowResponse(status);
+
+        HTTPResponseHandler.configureOK(context, jsonResponse);
+    }
+
+    /**
+     * Initiate file format converter
+     * GET http://localhost:{port}/v2/logs
+     *
+     * Example:
+     * GET http://localhost:{port}/v2/logs
+     */
+    public void getLogs(RoutingContext context)
+    {
+        if (SystemHandler.openLogFile())
+        {
+            HTTPResponseHandler.configureOK(context);
+        }
+        else
+        {
+            HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError("Failed to open log file"));
+        }
     }
 }
