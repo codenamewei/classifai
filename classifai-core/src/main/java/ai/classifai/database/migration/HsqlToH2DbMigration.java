@@ -135,6 +135,7 @@ public class HsqlToH2DbMigration extends DbMigration
                             .put(ParamConfig.getImgYParam(), rs.getInt(7))
                             .put(ParamConfig.getImgWParam(), rs.getInt(8))
                             .put(ParamConfig.getImgHParam(), rs.getInt(9))
+                            .put(ParamConfig.getFileSizeParam(), rs.getInt(10))
                             .put(ParamConfig.getImgOriWParam(), rs.getInt(11))
                             .put(ParamConfig.getImgOriHParam(), rs.getInt(12)));
 
@@ -148,30 +149,30 @@ public class HsqlToH2DbMigration extends DbMigration
     }
 
     @Override
-    public Pair<Map<String, JSONArray>, JSONArray> filterProjects(Map<String, JSONArray> jsonDict)
+    public Pair<Map<String, JSONArray>, Map<String, JSONArray>> filterProjects(Map<String, JSONArray> jsonDict)
     {
         buildMigratableProjDict(jsonDict);
 
         return filterMigratableProjects(jsonDict, projectPathDict);
     }
 
-    @Override
-    protected void showNonmigratableProjects(JSONArray nonmigratableProjects)
-    {
-        StringBuilder stringBuilder = new StringBuilder();
-
-        stringBuilder.append("Project that are unable to migrate:\n");
-        for (Object obj : nonmigratableProjects)
-        {
-            JSONObject jsonObject = (JSONObject) obj;
-            String annotationType = AnnotationType.getByInt(jsonObject.getInt(ParamConfig.getAnnotationTypeParam()));
-            String projectName = jsonObject.getString(ParamConfig.getProjectNameParam());
-
-            stringBuilder.append("(" + annotationType + ") " + projectName + "\n");
-        }
-
-        showMessageDialog(new JFrame("Project unable to migrate"), stringBuilder.toString());
-    }
+//    @Override
+//    protected void showNonmigratableProjects(JSONArray nonmigratableProjects)
+//    {
+//        StringBuilder stringBuilder = new StringBuilder();
+//
+//        stringBuilder.append("Project that are unable to migrate:\n");
+//        for (Object obj : nonmigratableProjects)
+//        {
+//            JSONObject jsonObject = (JSONObject) obj;
+//            String annotationType = AnnotationType.getByInt(jsonObject.getInt(ParamConfig.getAnnotationTypeParam()));
+//            String projectName = jsonObject.getString(ParamConfig.getProjectNameParam());
+//
+//            stringBuilder.append("(" + annotationType + ") " + projectName + "\n");
+//        }
+//
+//        showMessageDialog(new JFrame("Project unable to migrate"), stringBuilder.toString());
+//    }
 
     @Override
     public Map<String, JSONArray> transformData(Map<String, JSONArray> jsonDict)
@@ -223,6 +224,7 @@ public class HsqlToH2DbMigration extends DbMigration
                     st.setInt(5, obj.getInt(ParamConfig.getImgDepth()));                                //img_depth
                     st.setInt(6, obj.getInt(ParamConfig.getImgOriWParam()));                            //ori W
                     st.setInt(7, obj.getInt(ParamConfig.getImgOriHParam()));                            //ori H
+                    st.setInt(8, obj.getInt(ParamConfig.getFileSizeParam()));
 
                     st.executeUpdate();
                     st.clearParameters();
@@ -238,42 +240,50 @@ public class HsqlToH2DbMigration extends DbMigration
         return true;
     }
 
-    private Pair<Map<String, JSONArray>, JSONArray> filterMigratableProjects(Map<String, JSONArray> jsonDict, Map<Integer, String> projectPathDict)
+    @Override
+    protected Map<String, JSONArray> convertDisallowedJsonDict(Map<String, JSONArray> filteredJsonDict, Map<String, JSONArray> disallowedJsonDict)
+    {
+        if (!disallowedJsonDict.get(DbConfig.getPortfolioKey()).isEmpty())
+        {
+            // show user which project is not migratable
+            // change project path and child path
+            // copy images to one path
+        }
+
+        return filteredJsonDict;
+    }
+
+    private Pair<Map<String, JSONArray>, Map<String, JSONArray>> filterMigratableProjects(Map<String, JSONArray> jsonDict, Map<Integer, String> projectPathDict)
     {
         Map<String, JSONArray> filteredDict = new HashMap<>();
-        JSONArray nonmigratableProjects = new JSONArray();
+        Map<String, JSONArray> unallowedDict = new HashMap<>();
 
         Set<Integer> allowedProject = projectPathDict.keySet();
         for (String key : jsonDict.keySet())
         {
             JSONArray data = jsonDict.get(key);
             JSONArray filteredData = new JSONArray();
+            JSONArray unallowedData = new JSONArray();
 
             for (int i = data.length() - 1; i >= 0; i--)
             {
                 JSONObject row = data.getJSONObject(i);
 
                 Integer projectId = row.getInt(ParamConfig.getProjectIdParam());
+
                 if (!allowedProject.contains(projectId))
                 {
-                    if (key.equals(DbConfig.getPortfolioKey()))
-                    {
-                        nonmigratableProjects.put(row);
-                        log.info(AnnotationType.values()[row.getInt(ParamConfig.getAnnotationTypeParam())] + " Project " + row.getString(ParamConfig.getProjectNameParam()) + " will not be migrated due to multiple sources of image folder");
-                    }
+                    unallowedData.put(row);
                 }
                 else
                 {
-                    if (key.equals(DbConfig.getPortfolioKey()))
-                    {
-                        log.info(AnnotationType.values()[row.getInt(ParamConfig.getAnnotationTypeParam())] + " Project " + row.getString(ParamConfig.getProjectNameParam()) + " will be migrated.");
-                    }
                     filteredData.put(row);
                 }
             }
+            unallowedDict.put(key, unallowedData);
             filteredDict.put(key, filteredData);
         }
-        return new ImmutablePair<>(filteredDict, nonmigratableProjects);
+        return new ImmutablePair<>(filteredDict, unallowedDict);
     }
 
     private void buildTransformationDicts(Map<String, JSONArray> jsonDict)
@@ -299,7 +309,6 @@ public class HsqlToH2DbMigration extends DbMigration
             //transform projectid
             String projectId = UuidGenerator.generateUuid();
             projectIdDict.put(projectIdInt, projectId);
-
 
             //transform uuid
             List<String> uuidList = new ArrayList<>();
@@ -408,7 +417,8 @@ public class HsqlToH2DbMigration extends DbMigration
                             .put(ParamConfig.getVersionListParam(), versionList)
                             .put(ParamConfig.getImgDepth(), row.getInt(ParamConfig.getImgDepth()))
                             .put(ParamConfig.getImgOriWParam(), row.getInt(ParamConfig.getImgOriWParam()))
-                            .put(ParamConfig.getImgOriHParam(), row.getInt(ParamConfig.getImgOriHParam()));
+                            .put(ParamConfig.getImgOriHParam(), row.getInt(ParamConfig.getImgOriHParam()))
+                            .put(ParamConfig.getFileSizeParam(), row.getInt(ParamConfig.getFileSizeParam()));
                 }
                 transformedData.put(transformedRow);
             }

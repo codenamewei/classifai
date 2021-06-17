@@ -111,9 +111,9 @@ public abstract class DbMigration implements DbMigrationServiceable
      *                      value: jsonArray of respective database
      * @return pair of dictionary and JsonArray
      * left: migratable databases; key: database key, value: database rows
-     * right: nonmigratable portfolio database; to inform user which project could not be migrated
+     * right: nonmigratable databases; key: database key, value: database rows
      */
-    protected abstract Pair<Map<String, JSONArray>, JSONArray> filterProjects(Map<String, JSONArray> inputJsonDict);
+    protected abstract Pair<Map<String, JSONArray>, Map<String, JSONArray>> filterProjects(Map<String, JSONArray> inputJsonDict);
     
     /**
      * perform transformation of data to fit new database structure
@@ -136,11 +136,13 @@ public abstract class DbMigration implements DbMigrationServiceable
     protected abstract boolean writeJson2ToDb(String key, Connection con, JSONArray arr);
 
     /**
-     * display a popup message to inform user the nonmigratable projects
-     *
-     * @param nonmigratableProjects the data of nonmigratable projects
+     * convert the disallowed projects to migratable form with user permission
+     * 
+     * @param filteredJsonDict the allowed project json dict
+     * @param disallowedJsonDict the disallowed project json dict
+     * @return dictionary with all allowed and converted disallowed projects, the                           
      */
-    protected abstract void showNonmigratableProjects(JSONArray nonmigratableProjects);
+    protected abstract Map<String, JSONArray> convertDisallowedJsonDict(Map<String, JSONArray> filteredJsonDict, Map<String, JSONArray> disallowedJsonDict);
 
     /**
      * main function of database migration
@@ -168,19 +170,17 @@ public abstract class DbMigration implements DbMigrationServiceable
 
             //split projects into migratable and nonmigratable
             //left: dict for migratable projects databases
-            //right: only poftfolio database of nonmigratable projects
-            Pair<Map<String, JSONArray>, JSONArray> filteredPair = filterProjects(inputJsonDict);
+            //right: dict for nonmigratable projects databases
+            Pair<Map<String, JSONArray>, Map<String, JSONArray>> filteredPair = filterProjects(inputJsonDict);
             
             Map<String, JSONArray> filteredJsonDict = filteredPair.getLeft();
             
-            JSONArray nonmigratableProjects = filteredPair.getRight();
+            Map<String, JSONArray> disallowedJsonDict = filteredPair.getRight();
 
-            //display to user the names of nonmigratable projects
-            showNonmigratableProjects(nonmigratableProjects);
+            //perform convertion to disallowedJsonDict to make it migratable **with user permission**
+            Map<String, JSONArray> finalMigratingDict = convertDisallowedJsonDict(filteredJsonDict, disallowedJsonDict);
 
-            //obtain user decision of database migration
-            migrationOption = new ConfirmDialog("Database Migration", "Do you want to perform migration?\nKindly press \"No\" and continue with ClassifAI v1 if your current working project is not migratable.\nThe nonmigratable data will be lost if migration is performed.\n").init();
-
+            
             if (migrationOption)
             {
                 //transform migratable data into correct format
@@ -213,7 +213,7 @@ public abstract class DbMigration implements DbMigrationServiceable
         //delete old database files
         return migrationOption;
     }
-
+    
     private void deleteDatabaseFiles(boolean skipOrDelete)
     {
         for (String key : tableKeyList)

@@ -62,8 +62,10 @@ public class MainVerticle extends AbstractVerticle
         // if user refuse to migrate, classifai will be revert to v1 and shut down.
         if (!DbOps.configureDatabase())
         {
-            log.info("Classifai stopped due to user refused to migrate.");
+            String message = "Classifai stopped due to user refused to migrate.";
+            log.info(message);
             this.stop(promise);
+            promise.fail(message);
             System.exit(0);
         }
 
