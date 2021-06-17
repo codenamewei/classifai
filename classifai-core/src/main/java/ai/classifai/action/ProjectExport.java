@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -54,9 +55,9 @@ public class ProjectExport
                 .put(ActionConfig.getUpdatedDateParam(), new DateTime().toString());
     }
 
-    private static String exportToFile(@NonNull String projectId, @NonNull JsonObject jsonObject)
+    public static String exportToFile(@NonNull String projectId, @NonNull JsonObject jsonObject)
     {
-        ProjectLoader loader = ProjectHandler.getProjectLoader(projectId);
+        ProjectLoader loader = Objects.requireNonNull(ProjectHandler.getProjectLoader(projectId));
 
         //Configuration file of json format
         String configPath = loader.getProjectPath() + File.separator + loader.getProjectName() + ".json";
@@ -79,22 +80,22 @@ public class ProjectExport
         return configPath;
     }
 
-    private static String exportToFileWithData(ProjectLoader loader, String projectId, JsonObject configContent) throws IOException
+    public static String exportToFileWithData(ProjectLoader loader, String projectId, JsonObject configContent) throws IOException
     {
         String configPath = exportToFile(projectId, configContent);
-        File zipFile = Paths.get(loader.getProjectPath(), loader.getProjectName() + ".zip").toFile();
-        List<File> validImagePaths = ImageHandler.getValidImagesFromFolder(new File(loader.getProjectPath()));
+        File zipFile = Paths.get(loader.getProjectPath().getAbsolutePath(), loader.getProjectName() + ".zip").toFile();
+        List<String> validImagePaths = ImageHandler.getValidImagesFromFolder(loader.getProjectPath());
 
         FileOutputStream fos = new FileOutputStream(zipFile);
         ZipOutputStream out = new ZipOutputStream(fos);
 
         // Add config file
-        addToEntry(new File(configPath), out, new File(loader.getProjectPath()));
+        addToEntry(new File(configPath), out, loader.getProjectPath());
 
-        // Add all image data
-        for(File filePath: validImagePaths)
+        // Add all data
+        for(String dataPath: validImagePaths)
         {
-            addToEntry(filePath, out, new File(loader.getProjectPath()));
+            addToEntry(new File(dataPath), out, loader.getProjectPath());
         }
         out.close();
         fos.close();
@@ -107,7 +108,7 @@ public class ProjectExport
     private static void addToEntry(File filePath, ZipOutputStream out, File dir) throws IOException
     {
         String relativePath = filePath.toString().substring(dir.getAbsolutePath().length()+1);
-        String saveFileRelativePath = Paths.get(filePath.getParentFile().getName(), relativePath).toFile().toString();
+        String saveFileRelativePath = Paths.get(dir.getName(), relativePath).toFile().toString();
 
         ZipEntry entry = new ZipEntry(saveFileRelativePath);
         out.putNextEntry(entry);
@@ -128,26 +129,6 @@ public class ProjectExport
         {
             log.debug(e.toString());
         }
-    }
-
-    public static String runExportProcess(ProjectLoader loader, JsonObject configContent, int exportType)
-    {
-        if(exportType == ActionConfig.ExportType.CONFIG_WITH_DATA.ordinal())
-        {
-            log.info("Exporting Config with data");
-            try {
-                return exportToFileWithData(loader, loader.getProjectId(), configContent);
-            } catch (IOException e) {
-                log.warn("Error creating zip file");
-            }
-        }
-        else if(exportType == ActionConfig.ExportType.CONFIG_ONLY.ordinal())
-        {
-            log.info("Exporting Config only");
-            return exportToFile(loader.getProjectId(), configContent);
-        }
-
-        return null;
     }
 
     public static JsonObject getConfigContent(@NonNull RowSet<Row> rowSet, @NonNull RowSet<Row> projectRowSet)

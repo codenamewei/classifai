@@ -18,7 +18,8 @@
         "polygon": "多边形",
         "eraser": "橡皮",
         "fitCenter": "调整到屏幕大小",
-        "save": "存档"
+        "save": "存档",
+        "info": "快捷键资讯"
     },
     "rightSideBar": {
         "folderOrFiles": "文件夹 / 文件",
@@ -53,10 +54,12 @@
     "exportModal": {
         "exportOptions": "导出选择",
         "configFile": "配置文件",
-        "configFileWithData": "配置文件和数据",
+        "zipFile": "压缩文件",
+        "withData": "(包括数据)",
         "cancel": "取消"
     },
     "footer": {
+        "projectName": "项目名",
         "size": "容量",
         "image": "格式",
         "dimension": "尺寸",
@@ -65,5 +68,19 @@
     "exportSuccess": "导出成功",
     "exportFailed": "导出失败",
     "reloadSuccess": "重新导入成功",
-    "reloadFailed": "重新导入失败"
+    "reloadFailed": "重新导入失败",
+    "labelExist": "此标签已被使用，无法删除",
+    "location": "文件位置: ",
+    "exportTitle": "导出项目",
+    "bulkSave": "所有图片",
+    "singleSave": "单一图片",
+    "advModal": {
+        "title": "高级设置",
+        "noLabel": "无标签",
+        "btnSave": "保存",
+        "instructionText": "向左切换以禁用标签"
+    },
+    "configFileInfoTitle": "选择正确的导出格式",
+    "configFileInfoDest1": "配置文件是包含项目元数据的配置文件。当数据在要导入到的系统中随时可用时，它是合适的。",
+    "configFileInfoDest2": "压缩文件包含带有项目中使用的数据集的配置文件。它编译要在不同系统中复制的项目的所有组件。"
 }

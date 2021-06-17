@@ -18,7 +18,8 @@
         "polygon": "Polygon",
         "eraser": "Eraser",
         "fitCenter": "Fit Center",
-        "save": "Save"
+        "save": "Save",
+        "info": "Shortcut Key Info"
     },
     "rightSideBar": {
         "folderOrFiles": "Folder / Files",
@@ -51,12 +52,39 @@
         "subRegionInfo": "Input Sub Region Info"
     },
     "exportModal": {
-        "exportOptions": "Choose Export Options",
+        "exportOptions": "Export Project To",
         "configFile": "Config File",
-        "configFileWithData": "Config File & Data",
+        "zipFile": "Zip File",
+        "withData": "(With Data)",
         "cancel": "Cancel"
     },
+    "info": {
+        "header": "Keyboard Shortcut Information",
+        "shortcut": {
+            "1": {
+                "key": "Ctrl + z",
+                "functionality": "Undo the last action"
+            },
+            "2": {
+                "key": "Ctrl + c",
+                "functionality": "Copy the selected bounding box"
+            },
+            "3": {
+                "key": "Ctrl + v",
+                "functionality": "Paste the selected bounding box"
+            },
+            "4": {
+                "key": "Delete/Backspace",
+                "functionality": "Delete a selected bounding box"
+            },
+            "5": {
+                "key": "Double click on a selected bounding box",
+                "functionality": "Choose label for the selected bounding box"
+            }
+        }
+    },
     "footer": {
+        "projectName": "Project Name",
         "size": "Size",
         "image": "Image",
         "dimension": "Dimension",
@@ -65,5 +93,19 @@
     "exportSuccess": " project was exported successfully!",
     "exportFailed": "Fail to export ",
     "reloadSuccess": " project was reload successfully!",
-    "reloadFailed": "Fail to reload "
+    "reloadFailed": "Fail to reload ",
+    "labelExist": "Some image in project are using this label. Deleting this label are not allowed.",
+    "location": "File Location: ",
+    "exportTitle": "Export Project",
+    "bulkSave": "Bulk Saving",
+    "singleSave": "Current Image",
+    "advModal": {
+        "title": "Advanced Setting",
+        "noLabel": "No Label",
+        "btnSave": "Save",
+        "instructionText": "Toggle left to disable the label"
+    },
+    "configFileInfoTitle": "Choosing the Right Export",
+    "configFileInfoDest1": "Config File is the configuration file contains of metadata of a project. It is suitable when the data is readily available in the system to be imported to.",
+    "configFileInfoDest2": "Zip File contains the Config File with dataset used in a project. It compiles all the components of a project to be reproduced in a different system."
 }

@@ -15,7 +15,7 @@
  */
 package ai.classifai.data.type.image;
 
-import ai.classifai.util.error.NotSupportedImageTypeError;
+import ai.classifai.util.exception.NotSupportedImageTypeException;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.bmp.BmpHeaderDirectory;
 import com.drew.metadata.jpeg.JpegDirectory;
@@ -29,7 +29,7 @@ import com.drew.metadata.png.PngDirectory;
  */
 public class ImageDataFactory
 {
-    public ImageData getImageData(Metadata metadata) throws NotSupportedImageTypeError
+    public ImageData getImageData(Metadata metadata) throws NotSupportedImageTypeException
     {
         if (metadata.containsDirectoryOfType(JpegDirectory.class))
         {
@@ -45,7 +45,7 @@ public class ImageDataFactory
         }
         else
         {
-            throw new NotSupportedImageTypeError("File type not supported");
+            throw new NotSupportedImageTypeException("File type not supported");
         }
     }
 }

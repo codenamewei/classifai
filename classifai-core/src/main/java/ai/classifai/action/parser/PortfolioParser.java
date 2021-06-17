@@ -15,11 +15,12 @@
  */
 package ai.classifai.action.parser;
 
+import ai.classifai.action.ActionConfig;
 import ai.classifai.action.ActionOps;
 import ai.classifai.database.versioning.ProjectVersion;
 import ai.classifai.database.versioning.Version;
-import ai.classifai.loader.LoaderStatus;
 import ai.classifai.loader.ProjectLoader;
+import ai.classifai.loader.ProjectLoaderStatus;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.project.ProjectInfra;
 import ai.classifai.util.project.ProjectInfraHandler;
@@ -31,6 +32,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
 import java.util.Locale;
 import java.util.Map;
 
@@ -91,14 +93,13 @@ public class PortfolioParser
                                 .projectId(jsonObject.getString(ParamConfig.getProjectIdParam()))               //project_id
                                 .projectName(jsonObject.getString(ParamConfig.getProjectNameParam()))           //project_name
                                 .annotationType(annotationInt)                                                  //annotation_type
-
-                                .projectPath(jsonObject.getString(ParamConfig.getProjectPathParam()))           //project_path
+                                .projectPath(new File(ActionConfig.getJsonFilePath()))                          //project_path
                                 .isProjectNew(jsonObject.getBoolean(ParamConfig.getIsNewParam()))               //is_new
                                 .isProjectStarred(jsonObject.getBoolean(ParamConfig.getIsStarredParam()))       //is_starred
 
                                 .projectInfra(projectInfra)                                                     //project_infra
 
-                                .loaderStatus(LoaderStatus.DID_NOT_INITIATED)
+                                .projectLoaderStatus(ProjectLoaderStatus.DID_NOT_INITIATED)
 
                                 .projectVersion(project)                                                        //project_version
                                 .build();

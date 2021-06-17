@@ -13,20 +13,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package ai.classifai.loader;
+package ai.classifai.util.exception;
 
-import lombok.extern.slf4j.Slf4j;
-
-/***
- * Loader status for project loading
+/**
+ * Exception thrown when data type is not supported
  *
- * @author codenamewei
+ * @author YCCertifai
  */
-@Slf4j
-public enum LoaderStatus
-{
-    ERROR,
-    LOADING,
-    LOADED, //projectloader will have this status once create new project
-    DID_NOT_INITIATED, //default value when ProjectLoader created from database
+public class NotSupportedImageTypeException extends Exception{
+
+    public NotSupportedImageTypeException(String message)
+    {
+        super(message);
+    }
 }

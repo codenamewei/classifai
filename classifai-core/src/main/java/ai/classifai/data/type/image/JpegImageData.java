@@ -33,11 +33,11 @@ public class JpegImageData extends ImageData
 
     @Override
     public int getWidth() throws MetadataException {
-        return metadata.getFirstDirectoryOfType(JpegDirectory.class).getImageWidth();
+        return metadata.getFirstDirectoryOfType(JpegDirectory.class).getInt(JpegDirectory.TAG_IMAGE_WIDTH);
     }
 
     @Override
     public int getHeight() throws MetadataException {
-        return metadata.getFirstDirectoryOfType(JpegDirectory.class).getImageHeight();
+        return metadata.getFirstDirectoryOfType(JpegDirectory.class).getInt(JpegDirectory.TAG_IMAGE_HEIGHT);
     }
 }

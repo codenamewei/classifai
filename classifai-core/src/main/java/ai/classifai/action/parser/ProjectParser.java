@@ -21,6 +21,7 @@ import ai.classifai.database.versioning.AnnotationVersion;
 import ai.classifai.loader.ProjectLoader;
 import ai.classifai.util.Hash;
 import ai.classifai.util.ParamConfig;
+import ai.classifai.util.data.StringHandler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
@@ -54,7 +55,7 @@ public class ProjectParser
         {
             Row row = rowIterator.next();
 
-            String imgPath = row.getString(1).replace("\\", "").replace("/", "");
+            String imgPath = StringHandler.removeFirstSlashes(row.getString(1));
 
             String fullPath = Paths.get(projectPath, imgPath).toString();
 
@@ -66,8 +67,8 @@ public class ProjectParser
                     .put(ParamConfig.getVersionListParam(), new JsonArray(row.getString(2)))   //version_list
                     .put(ParamConfig.getImgDepth(), row.getInteger(3))          //img_depth
                     .put(ParamConfig.getImgOriWParam(), row.getInteger(4))      //img_ori_w
-                    .put(ParamConfig.getImgOriHParam(), row.getInteger(5));     //img_ori_h
-
+                    .put(ParamConfig.getImgOriHParam(), row.getInteger(5))      //img_ori_h
+                    .put(ParamConfig.getFileSizeParam(), row.getInteger(6));
 
             //uuid, version, content
             content.put(row.getString(0), annotationJsonObject);
@@ -90,9 +91,9 @@ public class ProjectParser
 
             JsonObject jsonObject = (JsonObject) item.getValue();
 
-            String subPath = jsonObject.getString(ParamConfig.getImgPathParam());
+            String subPath = String.join(File.separator,jsonObject.getString(ParamConfig.getImgPathParam()).split("[/\\\\]"));
 
-            File fullPath = Paths.get(loader.getProjectPath(), subPath).toFile();
+            File fullPath = Paths.get(loader.getProjectPath().getAbsolutePath(), subPath).toFile();
 
             // Only proceed to uploading image if image exists. Else skip
             if(fullPath.exists())
@@ -111,6 +112,7 @@ public class ProjectParser
                             .imgDepth(jsonObject.getInteger(ParamConfig.getImgDepth()))
                             .imgOriW(jsonObject.getInteger(ParamConfig.getImgOriWParam()))
                             .imgOriH(jsonObject.getInteger(ParamConfig.getImgOriHParam()))
+                            .fileSize(jsonObject.getInteger(ParamConfig.getFileSizeParam()))
                             .build();
 
                     loader.getUuidAnnotationDict().put(uuid, annotation);
@@ -136,7 +138,7 @@ public class ProjectParser
 
             String version = jsonVersion.getString(ParamConfig.getVersionUuidParam());
 
-            AnnotationVersion annotationVersion = new AnnotationVersion(jsonVersion.getJsonObject(ParamConfig.getAnnotationDataParam()));
+            AnnotationVersion annotationVersion = new AnnotationVersion((jsonVersion.getJsonObject(ParamConfig.getAnnotationDataParam())));
 
             annotationDict.put(version, annotationVersion);
         }

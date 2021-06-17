@@ -17,7 +17,8 @@ package ai.classifai.selector.project;
 
 import ai.classifai.action.ActionConfig;
 import ai.classifai.action.ProjectImport;
-import ai.classifai.selector.filesystem.FileSystemStatus;
+import ai.classifai.selector.status.FileSystemStatus;
+import ai.classifai.selector.status.SelectionWindowStatus;
 import ai.classifai.ui.SelectionWindow;
 import ai.classifai.ui.launcher.WelcomeLauncher;
 import lombok.Getter;
@@ -41,7 +42,11 @@ public class ProjectImportSelector extends SelectionWindow {
 
     @Getter
     @Setter
-    private static FileSystemStatus importFileSystemStatus = FileSystemStatus.DID_NOT_INITIATE;
+    private static FileSystemStatus importFileSystemStatus = FileSystemStatus.DID_NOT_INITIATED;
+
+    @Setter
+    @Getter
+    private static String projectName = null;
 
     private static final FileNameExtensionFilter imgFilter = new FileNameExtensionFilter(
             "Json Files", "json");
@@ -50,59 +55,45 @@ public class ProjectImportSelector extends SelectionWindow {
     {
         try
         {
-            EventQueue.invokeLater(new Runnable() {
-                @Override
-                public void run() {
+            EventQueue.invokeLater(() ->
+            {
+                if(windowStatus.equals(SelectionWindowStatus.WINDOW_CLOSE))
+                {
+                    windowStatus = SelectionWindowStatus.WINDOW_OPEN;
+                    setImportFileSystemStatus(FileSystemStatus.ITERATING_FOLDER);
+                    setProjectName(null);
 
-                    if(windowStatus.equals(ImportSelectionWindowStatus.WINDOW_CLOSE))
+                    JFrame frame = initFrame();
+                    String title = "Select File";
+                    JFileChooser chooser = initChooser(JFileChooser.FILES_ONLY, title);
+                    chooser.setFileFilter(imgFilter);
+
+                    //Important: prevent Welcome Console from popping out
+                    WelcomeLauncher.setToBackground();
+
+                    int res = chooser.showOpenDialog(frame);
+                    frame.dispose();
+
+                    if (res == JFileChooser.APPROVE_OPTION)
                     {
-                        windowStatus = ImportSelectionWindowStatus.WINDOW_OPEN;
-                        setImportFileSystemStatus(FileSystemStatus.WINDOW_OPEN);
-
-                        JFrame frame = initFrame();
-                        String title = "Select File";
-                        JFileChooser chooser = initChooser(JFileChooser.FILES_ONLY, title);
-                        chooser.setFileFilter(imgFilter);
-
-                        //Important: prevent Welcome Console from popping out
-                        WelcomeLauncher.setToBackground();
-
-                        int res = chooser.showOpenDialog(frame);
-                        frame.dispose();
-
-                        if (res == JFileChooser.APPROVE_OPTION)
-                        {
-                            File jsonFile =  chooser.getSelectedFile().getAbsoluteFile();
-                            ActionConfig.setJsonFilePath(Paths.get(FilenameUtils.getFullPath(jsonFile.toString())).toString());
-
-                            log.info("Proceed with importing project with " + jsonFile.getName());
-
-                            if(!ProjectImport.importProjectFile(jsonFile))
-                            {
-                                log.debug("Import project failed");
-                                setImportFileSystemStatus(FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED);
-                            }
-                            else
-                            {
-                                log.debug("Import project success");
-                                setImportFileSystemStatus(FileSystemStatus.WINDOW_CLOSE_DATABASE_UPDATED);
-                            }
-                        }
-                        else
-                        {
-                            setImportFileSystemStatus(FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED);
-                            log.debug("Operation of import project aborted");
-                        }
+                        windowStatus = SelectionWindowStatus.WINDOW_CLOSE;
+                        File jsonFile =  chooser.getSelectedFile().getAbsoluteFile();
+                        runApproveOption(jsonFile);
                     }
                     else
                     {
-                        showAbortImportPopup();
-                        setImportFileSystemStatus(FileSystemStatus.WINDOW_CLOSE_DATABASE_NOT_UPDATED);
+                        windowStatus = SelectionWindowStatus.WINDOW_CLOSE;
+                        setImportFileSystemStatus(FileSystemStatus.ABORTED);
+                        log.debug("Operation of import project aborted");
                     }
-
-                    windowStatus = ImportSelectionWindowStatus.WINDOW_CLOSE;
-
                 }
+                else
+                {
+                    showAbortImportPopup();
+                }
+
+                windowStatus = SelectionWindowStatus.WINDOW_CLOSE;
+
             });
         }
         catch (Exception e)
@@ -111,11 +102,25 @@ public class ProjectImportSelector extends SelectionWindow {
         }
     }
 
-    private void showAbortImportPopup()
+    private void runApproveOption(File jsonFile)
     {
-        String popupTitle = "Error Opening Window";
-        String message = "Another selection window is currently open. Please close to proceed.";
-        SelectionWindow.showPopupAndLog(popupTitle, message, JOptionPane.ERROR_MESSAGE);
-    }
+        setImportFileSystemStatus(FileSystemStatus.DATABASE_UPDATING);
 
+        ActionConfig.setJsonFilePath(Paths.get(FilenameUtils.getFullPath(jsonFile.toString())).toString());
+
+        log.info("Proceed with importing project with " + jsonFile.getName());
+
+        if(!ProjectImport.importProjectFile(jsonFile))
+        {
+            String mes = "Import project failed.";
+            log.debug(mes);
+            setImportFileSystemStatus(FileSystemStatus.ABORTED);
+        }
+        else
+        {
+            String mes = "Import project success.";
+            log.debug(mes);
+            setImportFileSystemStatus(FileSystemStatus.DATABASE_UPDATED);
+        }
+    }
 }

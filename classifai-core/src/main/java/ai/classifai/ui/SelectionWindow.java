@@ -15,6 +15,7 @@
  */
 package ai.classifai.ui;
 
+import ai.classifai.selector.status.SelectionWindowStatus;
 import ai.classifai.ui.launcher.LogoLauncher;
 import ai.classifai.ui.launcher.WelcomeLauncher;
 import ai.classifai.util.ParamConfig;
@@ -26,7 +27,6 @@ import javax.swing.*;
 import java.awt.*;
 
 import static javax.swing.JOptionPane.showMessageDialog;
-import static javax.swing.JOptionPane.showOptionDialog;
 
 /**
  * For selection windows initialization and settings
@@ -36,17 +36,16 @@ import static javax.swing.JOptionPane.showOptionDialog;
 @Slf4j
 public class SelectionWindow {
 
-    public enum ImportSelectionWindowStatus
-    {
-        WINDOW_OPEN,
-        WINDOW_CLOSE
-    }
-
     // To make sure window open once only
     @Getter @Setter
-    public ImportSelectionWindowStatus windowStatus = ImportSelectionWindowStatus.WINDOW_CLOSE;
+    protected SelectionWindowStatus windowStatus = SelectionWindowStatus.WINDOW_CLOSE;
 
     private static JFrame frame = initFrame();
+
+    public boolean isWindowOpen()
+    {
+        return windowStatus.equals(SelectionWindowStatus.WINDOW_OPEN);
+    }
 
     public static JFrame initFrame()
     {
@@ -87,19 +86,15 @@ public class SelectionWindow {
 
     public static void showPopupAndLog(String title, String message, int popupType)
     {
-        log.info(message);
+        log.debug(message);
         WelcomeLauncher.setToBackground();
         showMessageDialog(frame, message, title, popupType);
     }
 
-    public static int showOptionPopupAndLog(String title, String message, String[] options)
+    public void showAbortImportPopup()
     {
-        WelcomeLauncher.setToBackground();
-        int choice = showOptionDialog(frame, message, title, JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-        log.debug("Chosen: " + choice);
-
-        return choice;
+        String popupTitle = "Error Opening Window";
+        String message = "Another selection window is currently open. Please close to proceed.";
+        SelectionWindow.showPopupAndLog(popupTitle, message, JOptionPane.ERROR_MESSAGE);
     }
-
 }

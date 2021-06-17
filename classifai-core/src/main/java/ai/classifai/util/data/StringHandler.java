@@ -15,36 +15,27 @@
  */
 package ai.classifai.util.data;
 
-import com.drew.lang.annotations.Nullable;
 import lombok.NonNull;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * String processing operation
  *
  * @author codenamewei
  */
-@Deprecated
 public class StringHandler
 {
-    private static String replacement = "";
-
-    public static String cleanUpRegex(@NonNull String input)
+    public static String removeSlashes(@NonNull String input)
     {
-        return cleanUpRegex(input, Arrays.asList("\""));
+        return input.replace("\\", "").replace("/", "");
     }
 
-    public static String cleanUpRegex(@NonNull String input, @Nullable List<String> regexList)
+    public static String removeEndOfLineChar(@NonNull String input)
     {
-        String output = input;
+        return input.replaceAll("[\\r\\n]", "");
+    }
 
-        for(String regex : regexList)
-        {
-            output = output.replace(regex, replacement);
-        }
-
-        return output;
+    public static String removeFirstSlashes(@NonNull String input)
+    {
+        return removeSlashes(input.substring(0,2)) + input.substring(2);
     }
 }
