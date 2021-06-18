@@ -26,7 +26,9 @@ import ai.classifai.util.collection.UuidGenerator;
 import ai.classifai.util.project.ProjectInfra;
 import ai.classifai.util.type.database.Hsql;
 import ai.classifai.util.type.database.RelationalDb;
+import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONArray;
@@ -243,8 +245,15 @@ public class HsqlToH2DbMigration extends DbMigration
     {
         if (!disallowedJsonDict.get(DbConfig.getPortfolioKey()).isEmpty())
         {
+
+            JSONArray disallowedPortfolioJsonArray = disallowedJsonDict.get(DbConfig.getPortfolioKey());
+
+            JSONArray disallowedBboxJsonArray = disallowedJsonDict.get(DbConfig.getBndBoxKey());
+
+            JSONArray disallowedSegJsonArray = disallowedJsonDict.get(DbConfig.getSegKey());
+
             // get disallowed project name list
-            List<String> disallowedProjectNameList = disallowedJsonDict.get(DbConfig.getPortfolioKey())
+            List<String> disallowedProjectNameList = disallowedPortfolioJsonArray
                     .toList()
                     .stream()
                     .map(obj -> ((JSONObject) obj).getString(ParamConfig.getProjectNameParam()))
@@ -257,23 +266,51 @@ public class HsqlToH2DbMigration extends DbMigration
             // change project path and child path
             Map<String, String> newProjectPathDict = dbMigrationUi.getNewProjectPathDict();
 
-            JSONArray disallowedPortfolioJsonArray = disallowedJsonDict.get(DbConfig.getPortfolioKey());
+            convertPortfolioAndCreateFolder(disallowedPortfolioJsonArray, newProjectPathDict, filteredJsonDict);
 
-            JSONArray disallowedBboxJsonArray = disallowedJsonDict.get(DbConfig.getBndBoxKey());
+            convertProjectAndCopyValidImages(disallowedBboxJsonArray, filteredJsonDict);
 
-            JSONArray disallowedSegJsonArray = disallowedJsonDict.get(DbConfig.getSegKey());
-
-            List<Integer> convertedProjectId = convertPortfolioAndCreateFolder(disallowedPortfolioJsonArray, newProjectPathDict, filteredJsonDict);
-
-            convertProjectAndCopyValidImages(disallowedBboxJsonArray, convertedProjectId, filteredJsonDict);
-
-            convertProjectAndCopyValidImages(disallowedSegJsonArray, convertedProjectId, filteredJsonDict);
+            convertProjectAndCopyValidImages(disallowedSegJsonArray, filteredJsonDict);
         }
 
         return filteredJsonDict;
     }
 
-    private List<Integer> convertPortfolioAndCreateFolder(JSONArray disallowedPortfolioJsonArray, Map<String, String> newProjectPathDict, Map<String, JSONArray> filteredJsonDict)
+    private void convertProjectAndCopyValidImages(JSONArray disallowedProjectJsonArray, Map<String, JSONArray> filteredJsonDict)
+    {
+        Set<Integer> projectIdSet = projectPathDict.keySet();
+
+        for (Object obj : disallowedProjectJsonArray)
+        {
+            JSONObject jsonObj = (JSONObject) obj;
+
+            Integer projectId = jsonObj.getInt(ParamConfig.getProjectIdParam());
+
+            String imagePath = jsonObj.getString(ParamConfig.getImgPathParam());
+
+            if (projectIdSet.contains(projectId))
+            {
+                String targetPath = projectPathDict.get(projectId);
+                try {
+                    //get current path
+                    File file = new File(imagePath);
+                    File target = new File(targetPath, file.getName());
+
+                    // copy
+                    FileUtils.copyFile(file, target);
+
+                    // change path
+                    jsonObj.put(ParamConfig.getImgPathParam(), target.getAbsolutePath());
+                }
+                catch (Exception exception)
+                {
+                    log.debug(String.format("Unable to copy image %s.", imagePath));
+                }
+            }
+        }
+    }
+
+    private void convertPortfolioAndCreateFolder(JSONArray disallowedPortfolioJsonArray, Map<String, String> newProjectPathDict, Map<String, JSONArray> filteredJsonDict)
     {
         Set<String> convertedProject = newProjectPathDict.keySet();
 
@@ -281,10 +318,15 @@ public class HsqlToH2DbMigration extends DbMigration
         {
             JSONObject jsonObj = (JSONObject) obj;
 
-            if (convertedProject.contains(jsonObj.getString(ParamConfig.getProjectNameParam())))
+            String projectName = jsonObj.getString(ParamConfig.getProjectNameParam());
+
+            Integer projectId = jsonObj.getInt(ParamConfig.getProjectIdParam());
+
+            if (convertedProject.contains(projectName))
             {
-                //
-                filteredJsonDict.get(ParamConfig.)
+                projectPathDict.put(projectId, newProjectPathDict.get(projectName));
+
+                filteredJsonDict.get(DbConfig.getPortfolioKey()).put(jsonObj);
             }
         }
     }
