@@ -19,11 +19,11 @@ import ai.classifai.database.DbConfig;
 import ai.classifai.database.annotation.AnnotationQuery;
 import ai.classifai.database.portfolio.PortfolioDbQuery;
 import ai.classifai.database.versioning.ProjectVersion;
+import ai.classifai.ui.component.DatabaseMigrationUi;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.collection.ConversionHandler;
 import ai.classifai.util.collection.UuidGenerator;
 import ai.classifai.util.project.ProjectInfra;
-import ai.classifai.util.type.AnnotationType;
 import ai.classifai.util.type.database.Hsql;
 import ai.classifai.util.type.database.RelationalDb;
 import lombok.extern.slf4j.Slf4j;
@@ -32,12 +32,10 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.swing.*;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
-
-import static javax.swing.JOptionPane.showMessageDialog;
+import java.util.stream.Collectors;
 
 /***
  * Program for database migration from v1 -> v2 // hsql -> h2
@@ -245,12 +243,50 @@ public class HsqlToH2DbMigration extends DbMigration
     {
         if (!disallowedJsonDict.get(DbConfig.getPortfolioKey()).isEmpty())
         {
+            // get disallowed project name list
+            List<String> disallowedProjectNameList = disallowedJsonDict.get(DbConfig.getPortfolioKey())
+                    .toList()
+                    .stream()
+                    .map(obj -> ((JSONObject) obj).getString(ParamConfig.getProjectNameParam()))
+                    .collect(Collectors.toList());
+
             // show user which project is not migratable
+            DatabaseMigrationUi dbMigrationUi = new DatabaseMigrationUi(disallowedProjectNameList);
+            dbMigrationUi.run();
+
             // change project path and child path
-            // copy images to one path
+            Map<String, String> newProjectPathDict = dbMigrationUi.getNewProjectPathDict();
+
+            JSONArray disallowedPortfolioJsonArray = disallowedJsonDict.get(DbConfig.getPortfolioKey());
+
+            JSONArray disallowedBboxJsonArray = disallowedJsonDict.get(DbConfig.getBndBoxKey());
+
+            JSONArray disallowedSegJsonArray = disallowedJsonDict.get(DbConfig.getSegKey());
+
+            List<Integer> convertedProjectId = convertPortfolioAndCreateFolder(disallowedPortfolioJsonArray, newProjectPathDict, filteredJsonDict);
+
+            convertProjectAndCopyValidImages(disallowedBboxJsonArray, convertedProjectId, filteredJsonDict);
+
+            convertProjectAndCopyValidImages(disallowedSegJsonArray, convertedProjectId, filteredJsonDict);
         }
 
         return filteredJsonDict;
+    }
+
+    private List<Integer> convertPortfolioAndCreateFolder(JSONArray disallowedPortfolioJsonArray, Map<String, String> newProjectPathDict, Map<String, JSONArray> filteredJsonDict)
+    {
+        Set<String> convertedProject = newProjectPathDict.keySet();
+
+        for (Object obj : disallowedPortfolioJsonArray)
+        {
+            JSONObject jsonObj = (JSONObject) obj;
+
+            if (convertedProject.contains(jsonObj.getString(ParamConfig.getProjectNameParam())))
+            {
+                //
+                filteredJsonDict.get(ParamConfig.)
+            }
+        }
     }
 
     private Pair<Map<String, JSONArray>, Map<String, JSONArray>> filterMigratableProjects(Map<String, JSONArray> jsonDict, Map<Integer, String> projectPathDict)
