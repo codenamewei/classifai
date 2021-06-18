@@ -23,6 +23,7 @@ import ai.classifai.ui.component.DatabaseMigrationUi;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.collection.ConversionHandler;
 import ai.classifai.util.collection.UuidGenerator;
+import ai.classifai.util.exception.DatabaseMigrationException;
 import ai.classifai.util.project.ProjectInfra;
 import ai.classifai.util.type.database.Hsql;
 import ai.classifai.util.type.database.RelationalDb;
@@ -34,6 +35,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.swing.*;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
@@ -241,43 +243,32 @@ public class HsqlToH2DbMigration extends DbMigration
     }
 
     @Override
-    protected Map<String, JSONArray> convertDisallowedJsonDict(Map<String, JSONArray> filteredJsonDict, Map<String, JSONArray> disallowedJsonDict)
-    {
+    protected Map<String, JSONArray> convertDisallowedJsonDict(Map<String, JSONArray> filteredJsonDict, Map<String, JSONArray> disallowedJsonDict) throws DatabaseMigrationException {
         if (!disallowedJsonDict.get(DbConfig.getPortfolioKey()).isEmpty())
         {
 
             JSONArray disallowedPortfolioJsonArray = disallowedJsonDict.get(DbConfig.getPortfolioKey());
 
-            JSONArray disallowedBboxJsonArray = disallowedJsonDict.get(DbConfig.getBndBoxKey());
-
-            JSONArray disallowedSegJsonArray = disallowedJsonDict.get(DbConfig.getSegKey());
-
             // get disallowed project name list
-            List<String> disallowedProjectNameList = disallowedPortfolioJsonArray
-                    .toList()
-                    .stream()
-                    .map(obj -> ((JSONObject) obj).getString(ParamConfig.getProjectNameParam()))
-                    .collect(Collectors.toList());
-
-            // show user which project is not migratable
-            DatabaseMigrationUi dbMigrationUi = new DatabaseMigrationUi(disallowedProjectNameList);
-            dbMigrationUi.run();
+            List<String> disallowedProjectNameList = disallowedProjectNameList(disallowedPortfolioJsonArray);
 
             // change project path and child path
-            Map<String, String> newProjectPathDict = dbMigrationUi.getNewProjectPathDict();
+            Map<String, String> newProjectPathDict = getNewPathFromUser(disallowedProjectNameList);
 
             convertPortfolioAndCreateFolder(disallowedPortfolioJsonArray, newProjectPathDict, filteredJsonDict);
 
-            convertProjectAndCopyValidImages(disallowedBboxJsonArray, filteredJsonDict);
+            convertProjectAndCopyValidImages(disallowedJsonDict, filteredJsonDict, DbConfig.getBndBoxKey());
 
-            convertProjectAndCopyValidImages(disallowedSegJsonArray, filteredJsonDict);
+            convertProjectAndCopyValidImages(disallowedJsonDict, filteredJsonDict, DbConfig.getSegKey());
         }
 
         return filteredJsonDict;
     }
 
-    private void convertProjectAndCopyValidImages(JSONArray disallowedProjectJsonArray, Map<String, JSONArray> filteredJsonDict)
+    private void convertProjectAndCopyValidImages(Map<String, JSONArray> disallowedJsonDict, Map<String, JSONArray> filteredJsonDict, String key)
     {
+        JSONArray disallowedProjectJsonArray = disallowedJsonDict.get(key);
+
         Set<Integer> projectIdSet = projectPathDict.keySet();
 
         for (Object obj : disallowedProjectJsonArray)
@@ -299,8 +290,7 @@ public class HsqlToH2DbMigration extends DbMigration
                     // copy
                     FileUtils.copyFile(file, target);
 
-                    // change path
-                    jsonObj.put(ParamConfig.getImgPathParam(), target.getAbsolutePath());
+                    filteredJsonDict.get(key).put(jsonObj);
                 }
                 catch (Exception exception)
                 {
@@ -308,6 +298,36 @@ public class HsqlToH2DbMigration extends DbMigration
                 }
             }
         }
+    }
+
+    private Map<String, String> getNewPathFromUser(List<String> disallowedProjectNameList) throws DatabaseMigrationException {
+        // show user which project is not migratable
+        DatabaseMigrationUi dbMigrationUi = new DatabaseMigrationUi(disallowedProjectNameList);
+
+        int result = JOptionPane.showConfirmDialog(null, dbMigrationUi.getMainPanel(), "Title", JOptionPane.OK_CANCEL_OPTION);
+
+        if (result == JOptionPane.OK_OPTION)
+        {
+            return dbMigrationUi.getSavePath();
+        }
+        else
+        {
+            throw new DatabaseMigrationException("User stopped migration process");
+        }
+    }
+
+    private List<String> disallowedProjectNameList(JSONArray disallowedPortfolioJsonArray)
+    {
+        List<String> disallowedProjectNameList = new ArrayList<>();
+
+        for (Object obj : disallowedPortfolioJsonArray)
+        {
+            JSONObject jsonObj = (JSONObject) obj;
+
+            disallowedProjectNameList.add(jsonObj.getString(ParamConfig.getProjectNameParam()));
+        }
+
+        return disallowedProjectNameList;
     }
 
     private void convertPortfolioAndCreateFolder(JSONArray disallowedPortfolioJsonArray, Map<String, String> newProjectPathDict, Map<String, JSONArray> filteredJsonDict)

@@ -13,16 +13,16 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package ai.classifai.util.error;
+package ai.classifai.util.exception;
 
 /**
- * Exception thrown when data type is not supported
+ * Exception thrown when database is not accessible
  *
  * @author YCCertifai
  */
-public class NotSupportedImageTypeError extends Exception{
-
-    public NotSupportedImageTypeError(String message)
+public class DatabaseMigrationException extends Exception
+{
+    public DatabaseMigrationException(String message)
     {
         super(message);
     }

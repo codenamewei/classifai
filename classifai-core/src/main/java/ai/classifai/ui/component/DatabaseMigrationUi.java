@@ -3,10 +3,14 @@ package ai.classifai.ui.component;
 import ai.classifai.util.ParamConfig;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.h2.store.fs.FileUtils;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -17,16 +21,12 @@ import java.util.stream.Collectors;
 public class DatabaseMigrationUi
 {
     private static Dimension dimension = new Dimension(750, 400);
-    private JDialog mainFrame;
-    private JPanel mainPanel;
+    @Getter private JPanel mainPanel;
     private JTextArea titleText;
     private List<ProjectPanel> projectPanels;
-    private JButton doneButton;
-    @Getter private Map<String, String> newProjectPathDict;
 
     public DatabaseMigrationUi(List<String> projectNameList)
     {
-        mainFrame = new JDialog();
         mainPanel = new JPanel();
         titleText = new JTextArea("Project listed below are having multiple source of image folders, where this is not allowed in v2.\n" +
                 "Please specify the new project folder to store the images." +
@@ -34,7 +34,7 @@ public class DatabaseMigrationUi
         projectPanels =  projectNameList.stream()
                 .map(ProjectPanel::new)
                 .collect(Collectors.toList());
-        doneButton = new JButton();
+        configure();
     }
 
     private void configure()
@@ -42,33 +42,28 @@ public class DatabaseMigrationUi
         configureTitleText();
 
         configureMainPanel();
-
-        configureMainFrame();
-
-        configureDoneButton();
     }
 
-    private void configureDoneButton()
+
+    public Map<String, String> getSavePath()
     {
-        doneButton.setText("Ok");
-        doneButton.addActionListener(this::savePathAndExit);
+        Map<String, String> newProjectPathDict = new HashMap<>();
+
+        projectPanels.forEach(panel -> savePathAndCreateDirectory(panel, newProjectPathDict));
+
+        return newProjectPathDict;
     }
 
-    private void savePathAndExit(ActionEvent e)
+    private void savePathAndCreateDirectory(ProjectPanel panel, Map<String, String> newProjectPathDict)
     {
-        newProjectPathDict = new HashMap<>();
+        String newProjectDirectory = panel.projectPathText.getText();
+        String projectName = panel.projectName;
+        String newProjectPath = String.join(File.separator,newProjectDirectory, projectName);
 
-        projectPanels.forEach(panel -> newProjectPathDict.put(panel.projectName, panel.projectPathText.getText()));
-    }
-
-    private void configureMainFrame()
-    {
-        mainFrame.setTitle("Migration Options");
-        mainFrame.setLocationRelativeTo(null);  // set to center
-        mainFrame.add(mainPanel);
-        mainFrame.pack();
-        mainFrame.setResizable(true);
-        mainFrame.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
+        if (Paths.get(newProjectDirectory).isAbsolute())
+        {
+            newProjectPathDict.put(projectName, newProjectPath);
+        }
     }
 
     private void configureMainPanel()
@@ -85,8 +80,7 @@ public class DatabaseMigrationUi
 
     public void run()
     {
-        configure();
-        mainFrame.setVisible(true);
+        this.mainPanel.setVisible(true);
     }
 
     private static class ProjectPanel extends JPanel

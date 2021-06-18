@@ -16,9 +16,8 @@
 package ai.classifai.database.migration;
 
 import ai.classifai.database.DbConfig;
-import ai.classifai.ui.component.ConfirmDialog;
 import ai.classifai.util.data.FileHandler;
-import ai.classifai.util.error.DatabaseNotAccessibleException;
+import ai.classifai.util.exception.DatabaseMigrationException;
 import ai.classifai.util.type.database.RelationalDb;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
@@ -74,6 +73,8 @@ public abstract class DbMigration implements DbMigrationServiceable
         this.toDb = toDb;
 
         this.createTableQueryDict = buildCreateTableQueryDict(tableKeyList);
+
+        migrationOption = true;
     }
 
     /**
@@ -142,7 +143,7 @@ public abstract class DbMigration implements DbMigrationServiceable
      * @param disallowedJsonDict the disallowed project json dict
      * @return dictionary with all allowed and converted disallowed projects, the                           
      */
-    protected abstract Map<String, JSONArray> convertDisallowedJsonDict(Map<String, JSONArray> filteredJsonDict, Map<String, JSONArray> disallowedJsonDict);
+    protected abstract Map<String, JSONArray> convertDisallowedJsonDict(Map<String, JSONArray> filteredJsonDict, Map<String, JSONArray> disallowedJsonDict) throws DatabaseMigrationException;
 
     /**
      * main function of database migration
@@ -159,7 +160,7 @@ public abstract class DbMigration implements DbMigrationServiceable
             //check if from database lock. If locked and unable to unlock, stop migration.
             if (isFromDbLocked(fromDb))
             {
-                throw new DatabaseNotAccessibleException("Remove lock file from origin database failed. Migration aborted.");
+                throw new DatabaseMigrationException("Remove lock file from origin database failed. Migration aborted.");
             }
 
             //create jdbc connection to from and to database
@@ -180,33 +181,28 @@ public abstract class DbMigration implements DbMigrationServiceable
             //perform convertion to disallowedJsonDict to make it migratable **with user permission**
             Map<String, JSONArray> finalMigratingDict = convertDisallowedJsonDict(filteredJsonDict, disallowedJsonDict);
 
-            
-            if (migrationOption)
-            {
-                //transform migratable data into correct format
-                Map<String, JSONArray> outputJsonDict = transformData(filteredJsonDict);
+            //transform migratable data into correct format
+            Map<String, JSONArray> outputJsonDict = transformData(finalMigratingDict);
 
-                //create table to new database
-                createToDbTables();
+            //create table to new database
+            createToDbTables();
 
-                //write data to new database
-                if (!writeOutDb(outputJsonDict)) {
-                    log.debug("failure in writing to output database. Migration aborted.");
-                    throw new DatabaseNotAccessibleException("Failed to write to output database. Migration aborted.");
-                }
+            //write data to new database
+            if (!writeOutDb(outputJsonDict)) {
+                log.debug("failure in writing to output database. Migration aborted.");
+                throw new DatabaseMigrationException("Failed to write to output database. Migration aborted.");
             }
         }
         catch (Exception e)
         {
-            String message = "Database migration aborted!\nTry to close all ClassifAI applications and restart again.\n\nContact hello@classifai.ai if extra help is required.";
-            log.info(message, e);
+            String message = "Database migration aborted!\n\nContact hello@classifai.ai if extra help is required.";
+            log.info(e.getMessage());
             showMessageDialog(new JFrame("Message"), message);
             migrationOption = false;
         }
 
         //close all jdbc connections
         closeConnectionToDatases();
-
 
         deleteDatabaseFiles(migrationOption);
 
