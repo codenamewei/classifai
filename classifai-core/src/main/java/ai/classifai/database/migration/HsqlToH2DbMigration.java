@@ -253,7 +253,7 @@ public class HsqlToH2DbMigration extends DbMigration
             List<String> disallowedProjectNameList = disallowedProjectNameList(disallowedPortfolioJsonArray);
 
             // change project path and child path
-            Map<String, String> newProjectPathDict = getNewPathFromUser(disallowedProjectNameList);
+            Map<String, String> newProjectPathDict = getNewPathFromUser(disallowedPortfolioJsonArray);
 
             convertPortfolioAndCreateFolder(disallowedPortfolioJsonArray, newProjectPathDict, filteredJsonDict);
 
@@ -300,11 +300,11 @@ public class HsqlToH2DbMigration extends DbMigration
         }
     }
 
-    private Map<String, String> getNewPathFromUser(List<String> disallowedProjectNameList) throws DatabaseMigrationException {
+    private Map<String, String> getNewPathFromUser(JSONArray disallowedProjectNameList) throws DatabaseMigrationException {
         // show user which project is not migratable
         DatabaseMigrationUi dbMigrationUi = new DatabaseMigrationUi(disallowedProjectNameList);
 
-        int result = JOptionPane.showConfirmDialog(null, dbMigrationUi.getMainPanel(), "Title", JOptionPane.OK_CANCEL_OPTION);
+        int result = JOptionPane.showConfirmDialog(null, dbMigrationUi.getMainPanel(), "Project Path Reconfiguring", JOptionPane.OK_CANCEL_OPTION);
 
         if (result == JOptionPane.OK_OPTION)
         {

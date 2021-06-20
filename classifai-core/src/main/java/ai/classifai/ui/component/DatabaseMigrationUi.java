@@ -1,49 +1,47 @@
 package ai.classifai.ui.component;
 
 import ai.classifai.util.ParamConfig;
+import ai.classifai.util.type.AnnotationType;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.h2.store.fs.FileUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class DatabaseMigrationUi
 {
-    private static Dimension dimension = new Dimension(750, 400);
     @Getter private JPanel mainPanel;
-    private JTextArea titleText;
     private List<ProjectPanel> projectPanels;
 
-    public DatabaseMigrationUi(List<String> projectNameList)
+    public DatabaseMigrationUi(JSONArray projectNameList)
     {
-        mainPanel = new JPanel();
-        titleText = new JTextArea("Project listed below are having multiple source of image folders, where this is not allowed in v2.\n" +
-                "Please specify the new project folder to store the images." +
-                " Or leave the selection window empty to skip the migration of the project.");
-        projectPanels =  projectNameList.stream()
-                .map(ProjectPanel::new)
-                .collect(Collectors.toList());
-        configure();
-    }
-
-    private void configure()
-    {
-        configureTitleText();
-
+        mainPanel = new JPanel(new GridLayout(0, 1));
+        projectPanels = createProjectPanels(projectNameList);
         configureMainPanel();
     }
 
+    private List<ProjectPanel> createProjectPanels(JSONArray projectNameList)
+    {
+        List<ProjectPanel> projectPanels = new ArrayList<>();
+        for (Object obj : projectNameList)
+        {
+            JSONObject JsonObj = (JSONObject) obj;
+            projectPanels.add(
+                    new ProjectPanel(JsonObj.getString(ParamConfig.getProjectNameParam()),
+                            AnnotationType.getByInt(JsonObj.getInt(ParamConfig.getAnnotationTypeParam()))));
+        }
+        return projectPanels;
+    }
 
     public Map<String, String> getSavePath()
     {
@@ -68,14 +66,8 @@ public class DatabaseMigrationUi
 
     private void configureMainPanel()
     {
-        mainPanel.setPreferredSize(dimension);
-        mainPanel.add(titleText);
         projectPanels.forEach(mainPanel::add);
-    }
-
-    private void configureTitleText()
-    {
-        configureTextArea(titleText);
+        mainPanel.setPreferredSize(new Dimension(400, 70 * projectPanels.size()));
     }
 
     public void run()
@@ -86,19 +78,26 @@ public class DatabaseMigrationUi
     private static class ProjectPanel extends JPanel
     {
         private String projectName;
+        private String projectType;
         private JTextArea projectNameText;
         private JTextArea projectPathText;
         private JButton openSelectionWindowButton;
         private JFileChooser projectPathSelector;
+        private GridBagConstraints gbc;
 
-        public ProjectPanel(String projectName)
+        public ProjectPanel(String projectName, String projectType)
         {
+            setLayout(new GridBagLayout());
+            setBorder(BorderFactory.createLineBorder(Color.gray));
+            gbc = new GridBagConstraints();
             this.projectName = projectName;
+            this.projectType = projectType;
+
             projectNameText = new JTextArea();
             projectPathText = new JTextArea();
-            openSelectionWindowButton = new JButton();
+            openSelectionWindowButton = new JButton("Migrate");
             projectPathSelector = new JFileChooser();
-            this.setPreferredSize(new Dimension(dimension.width, 20));
+
             this.configure();
             this.setVisible(true);
         }
@@ -113,23 +112,33 @@ public class DatabaseMigrationUi
 
         private void configureProjectName()
         {
-            projectNameText.setText(this.projectName);
+            projectNameText.setText(String.format("[%s] %s", this.projectType, this.projectName));
+            projectPathText.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
             configureTextArea(projectNameText);
-            this.add(projectNameText);
-        }
+            gbc.gridx = 0;
+            gbc.gridwidth = 5;
+            this.add(projectNameText, gbc);
 
-        private void configureProjectPath()
-        {
-            projectPathText.setText("No Path Selected");
-            configureTextArea(projectPathText);
-
-            this.add(projectPathText);
         }
 
         private void configureSelectionWindowButton()
         {
             openSelectionWindowButton.addActionListener(this::triggerSelectionWindow);
-            this.add(openSelectionWindowButton);
+            gbc.gridx = 0;
+            gbc.gridy = 1;
+            gbc.gridwidth = 1;
+            this.add(openSelectionWindowButton, gbc);
+
+        }
+
+        private void configureProjectPath()
+        {
+            projectPathText.setText("Project will not be migrated");
+            configureTextArea(projectPathText);
+            gbc.gridx = 3;
+            gbc.gridy = 1;
+            gbc.gridwidth = 2;
+            this.add(projectPathText, gbc);
         }
 
         private void configureSelectionWindow()
@@ -138,7 +147,7 @@ public class DatabaseMigrationUi
             projectPathSelector.setSelectedFile(null);
             projectPathSelector.setCurrentDirectory(ParamConfig.getRootSearchPath());
             projectPathSelector.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            projectPathSelector.setDialogTitle("Select Project Path");
+            projectPathSelector.setDialogTitle("Select new project path to migrate");
             projectPathSelector.setMultiSelectionEnabled(false);
         }
 
@@ -156,13 +165,6 @@ public class DatabaseMigrationUi
                 projectPathText.setText(chooser.getSelectedFile().getAbsolutePath());
             }
         }
-    }
-
-    public static void main(String[] args)
-    {
-        List<String> nameList = Arrays.asList("a", "b", "c");
-        DatabaseMigrationUi ui = new DatabaseMigrationUi(nameList);
-        ui.run();
     }
 
     private static void configureTextArea(JTextArea textArea)
