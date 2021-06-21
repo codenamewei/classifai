@@ -151,7 +151,8 @@ public abstract class DbMigration implements DbMigrationServiceable
      * @return true means migrate; false means not migrating => abort classifai as well
      */
     @Override
-    public boolean migrate(){
+    public boolean migrate()
+    {
         try
         {
             //move all old files to archive
@@ -197,7 +198,7 @@ public abstract class DbMigration implements DbMigrationServiceable
         {
             String message = "Database migration aborted!\n\nContact hello@classifai.ai if extra help is required.";
             log.info(e.getMessage());
-            showMessageDialog(new JFrame("Message"), message);
+            showMessageDialog(null, message, "Database migration failed", JOptionPane.PLAIN_MESSAGE);
             migrationOption = false;
         }
 
@@ -247,13 +248,15 @@ public abstract class DbMigration implements DbMigrationServiceable
         return connDict;
     }
 
-    private Connection connectDb(String tableAbsPath, RelationalDb db) throws SQLException, ClassNotFoundException {
+    private Connection connectDb(String tableAbsPath, RelationalDb db) throws SQLException, ClassNotFoundException
+    {
         Class.forName(db.getDriver());
 
         return DriverManager.getConnection(db.getUrlHeader() + tableAbsPath, db.getUser(), db.getPassword());
     }
 
-    private void copyToArchive() throws IOException {
+    private void copyToArchive() throws IOException
+    {
         for (String key : tableKeyList)
         {
             String path = DbConfig.getTableFolderPathDict().get(key);
