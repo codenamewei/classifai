@@ -19,7 +19,7 @@ import ai.classifai.database.DbConfig;
 import ai.classifai.database.annotation.AnnotationQuery;
 import ai.classifai.database.portfolio.PortfolioDbQuery;
 import ai.classifai.database.versioning.ProjectVersion;
-import ai.classifai.ui.component.DatabaseMigrationUi;
+import ai.classifai.ui.component.DbMigrationUi;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.collection.ConversionHandler;
 import ai.classifai.util.collection.UuidGenerator;
@@ -27,7 +27,6 @@ import ai.classifai.util.exception.DatabaseMigrationException;
 import ai.classifai.util.project.ProjectInfra;
 import ai.classifai.util.type.database.Hsql;
 import ai.classifai.util.type.database.RelationalDb;
-import io.vertx.core.json.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -39,7 +38,6 @@ import javax.swing.*;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /***
  * Program for database migration from v1 -> v2 // hsql -> h2
@@ -302,7 +300,7 @@ public class HsqlToH2DbMigration extends DbMigration
 
     private Map<String, String> getNewPathFromUser(JSONArray disallowedProjectNameList) throws DatabaseMigrationException {
         // show user which project is not migratable
-        DatabaseMigrationUi dbMigrationUi = new DatabaseMigrationUi(disallowedProjectNameList);
+        DbMigrationUi dbMigrationUi = new DbMigrationUi(disallowedProjectNameList);
 
         int result = JOptionPane.showConfirmDialog(null, dbMigrationUi.getMainPanel(), "Project Path Reconfiguring", JOptionPane.OK_CANCEL_OPTION);
 

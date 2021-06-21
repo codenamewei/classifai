@@ -18,12 +18,12 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-public class DatabaseMigrationUi
+public class DbMigrationUi
 {
     @Getter private JPanel mainPanel;
     private List<ProjectPanel> projectPanels;
 
-    public DatabaseMigrationUi(JSONArray projectNameList)
+    public DbMigrationUi(JSONArray projectNameList)
     {
         mainPanel = new JPanel(new GridLayout(0, 1));
         projectPanels = createProjectPanels(projectNameList);
@@ -88,7 +88,6 @@ public class DatabaseMigrationUi
         public ProjectPanel(String projectName, String projectType)
         {
             setLayout(new GridBagLayout());
-            setBorder(BorderFactory.createLineBorder(Color.gray));
             gbc = new GridBagConstraints();
             this.projectName = projectName;
             this.projectType = projectType;
@@ -172,5 +171,4 @@ public class DatabaseMigrationUi
         textArea.setBackground(null);
         textArea.setEditable(false);
     }
-
 }
