@@ -196,10 +196,10 @@ public class V2Endpoint extends EndpointBase {
 
     /**
      * Create new project status
-     * PUT http://localhost:{port}/v2/:annotation_type/projects/:project_name
+     * GET http://localhost:{port}/v2/:annotation_type/projects/:project_name
      *
      * Example:
-     * PUT http://localhost:{port}/v2/bndbox/projects/helloworld
+     * GET http://localhost:{port}/v2/bndbox/projects/helloworld
      */
     public void createProjectStatus(RoutingContext context)
     {
@@ -210,7 +210,14 @@ public class V2Endpoint extends EndpointBase {
 
         ProjectLoader loader = ProjectHandler.getProjectLoader(projectName, type);
 
-        JsonObject response = compileFileSysStatusResponse(loader.getFileSystemStatus());
+        FileSystemStatus status = loader.getFileSystemStatus();
+
+        JsonObject response = compileFileSysStatusResponse(status);
+
+        if (status.equals(FileSystemStatus.DATABASE_UPDATED))
+        {
+            response.put(ParamConfig.getUnsupportedImageListParam(), loader.getUnsupportedImageList());
+        }
 
         HTTPResponseHandler.configureOK(context, response);
     }
@@ -338,6 +345,7 @@ public class V2Endpoint extends EndpointBase {
         {
             res.put(ParamConfig.getUuidAdditionListParam(), loader.getReloadAdditionList());
             res.put(ParamConfig.getUuidDeletionListParam(), loader.getReloadDeletionList());
+            res.put(ParamConfig.getUnsupportedImageListParam(), loader.getUnsupportedImageList());
         }
 
         HTTPResponseHandler.configureOK(context, res);
@@ -368,6 +376,10 @@ public class V2Endpoint extends EndpointBase {
 
         DeliveryOptions options = new DeliveryOptions().addHeader(ParamConfig.getActionKeyword(), PortfolioDbQuery.getExportProject());
 
+        // Initiate export status
+        ProjectExport.setExportStatus(ProjectExport.ProjectExportStatus.EXPORT_STARTING);
+        ProjectExport.setExportPath("");
+
         vertx.eventBus().request(PortfolioDbQuery.getQueue(), request, options, reply -> {
 
             if (reply.succeeded()) {
@@ -379,10 +391,35 @@ public class V2Endpoint extends EndpointBase {
             else
             {
                 HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError("Export of project failed for " + projectName));
-
+                ProjectExport.setExportStatus(ProjectExport.ProjectExportStatus.EXPORT_FAIL);
             }
         });
 
+    }
+
+    /**
+     * Get export project status
+     * GET http://localhost:{port}/v2/:annotation_type/projects/exportstatus
+     *
+     * Example:
+     * GET http://localhost:{port}/v2/bndbox/projects/exportstatus
+     *
+     */
+    public void getExportStatus(RoutingContext context)
+    {
+        helper.checkIfDockerEnv(context);
+
+        ProjectExport.ProjectExportStatus exportStatus = ProjectExport.getExportStatus();
+        JsonObject response = ReplyHandler.getOkReply();
+        response.put(ActionConfig.getExportStatusParam(), exportStatus.ordinal());
+        response.put(ActionConfig.getExportStatusMessageParam(), exportStatus.name());
+
+        if(exportStatus.equals(ProjectExport.ProjectExportStatus.EXPORT_SUCCESS))
+        {
+            response.put(ActionConfig.getProjectConfigPathParam(), ProjectExport.getExportPath());
+        }
+
+        HTTPResponseHandler.configureOK(context, response);
     }
 
     public void importProject(RoutingContext context)
