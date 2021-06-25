@@ -19,6 +19,7 @@ import ai.classifai.database.migration.DbMigration;
 import ai.classifai.database.migration.HsqlToH2DbMigration;
 import ai.classifai.ui.SelectionWindow;
 import ai.classifai.util.data.FileHandler;
+import ai.classifai.util.exception.DatabaseMigrationException;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;

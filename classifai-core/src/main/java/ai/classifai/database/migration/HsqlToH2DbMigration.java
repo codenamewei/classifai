@@ -267,10 +267,12 @@ public class HsqlToH2DbMigration extends DbMigration
                 {
                     //get current path
                     File file = new File(imagePath);
-                    File target = new File(targetPath, file.getName());
+                    File target = getNewFileName(targetPath, file.getName());
 
                     // copy
                     FileUtils.copyFile(file, target);
+
+                    jsonObj.put(ParamConfig.getImgPathParam(), target.getAbsolutePath());
 
                     filteredJsonDict.get(key).put(jsonObj);
                 }
@@ -280,6 +282,25 @@ public class HsqlToH2DbMigration extends DbMigration
                 }
             }
         }
+    }
+
+    private File getNewFileName(String targetPath, String name)
+    {
+        File target = new File(targetPath, name);
+
+        int num = 0;
+
+        int idxOfDot = name.lastIndexOf('.');
+        String filename = name.substring(0, idxOfDot);
+        String ext = name.substring(idxOfDot);
+
+        while (target.exists())
+        {
+            String newName = String.format("%s_%d%s", filename, num, ext);
+            target = new File(targetPath, newName);
+        }
+
+        return target;
     }
 
     private Map<String, String> getNewPathFromUser(JSONArray disallowedProjectNameList) throws DatabaseMigrationException
@@ -323,14 +344,14 @@ public class HsqlToH2DbMigration extends DbMigration
     private Pair<Map<String, JSONArray>, Map<String, JSONArray>> filterMigratableProjects(Map<String, JSONArray> jsonDict, Map<Integer, String> projectPathDict)
     {
         Map<String, JSONArray> filteredDict = new HashMap<>();
-        Map<String, JSONArray> unallowedDict = new HashMap<>();
+        Map<String, JSONArray> disallowedDict = new HashMap<>();
 
         Set<Integer> allowedProject = projectPathDict.keySet();
         for (String key : jsonDict.keySet())
         {
             JSONArray data = jsonDict.get(key);
             JSONArray filteredData = new JSONArray();
-            JSONArray unallowedData = new JSONArray();
+            JSONArray disallowedData = new JSONArray();
 
             for (int i = data.length() - 1; i >= 0; i--)
             {
@@ -340,17 +361,17 @@ public class HsqlToH2DbMigration extends DbMigration
 
                 if (!allowedProject.contains(projectId))
                 {
-                    unallowedData.put(row);
+                    disallowedData.put(row);
                 }
                 else
                 {
                     filteredData.put(row);
                 }
             }
-            unallowedDict.put(key, unallowedData);
+            disallowedDict.put(key, disallowedData);
             filteredDict.put(key, filteredData);
         }
-        return new ImmutablePair<>(filteredDict, unallowedDict);
+        return new ImmutablePair<>(filteredDict, disallowedDict);
     }
 
     private void buildTransformationDicts(Map<String, JSONArray> jsonDict)

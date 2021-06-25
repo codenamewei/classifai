@@ -158,6 +158,28 @@ public abstract class DbMigration implements DbMigrationServiceable
             //move all old files to archive
             copyToArchive();
 
+            //ask permission to migrate
+            int migrationDecision = JOptionPane.showConfirmDialog(null,
+                    "You might have existing projects in ClassifAI v1.\nDo you want to continue to run in ClassifAI v2?",
+                    "ClassifAI v1 Project Detected",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (migrationDecision == JOptionPane.YES_OPTION)
+            {
+                int revertDecision = JOptionPane.showConfirmDialog(null,
+                        "Do you want to migrate your existing project to Classifai v2?",
+                        "Database migration required",
+                        JOptionPane.YES_NO_OPTION);
+                if (revertDecision == JOptionPane.NO_OPTION)
+                {
+                    return true;  // skip migration
+                }
+            }
+            else
+            {
+                throw new DatabaseMigrationException("User refused to start ClassifAI v2.");
+            }
+
             //check if from database lock. If locked and unable to unlock, stop migration.
             if (isFromDbLocked(fromDb))
             {
@@ -224,8 +246,12 @@ public abstract class DbMigration implements DbMigrationServiceable
 
     private void closeConnectionToDatases()
     {
-        closeConnection(new ArrayList<>(toConnDict.values()));
-        closeConnection(new ArrayList<>(fromConnDict.values()));
+        try
+        {
+            closeConnection(new ArrayList<>(toConnDict.values()));
+            closeConnection(new ArrayList<>(fromConnDict.values()));
+        }
+        catch (Exception ignored){}
     }
 
     private void createConnectionToDatabases() throws SQLException, ClassNotFoundException
@@ -332,7 +358,7 @@ public abstract class DbMigration implements DbMigrationServiceable
         for(Connection conn : connection)
         {
             try {
-                conn.close();
+                if (! conn.isClosed()) conn.close();
             }
             catch(Exception e)
             {
