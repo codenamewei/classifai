@@ -48,7 +48,7 @@ public class ConverterLauncher extends JPanel
 
     @Getter private static boolean isOpened;
 
-    private static final int MAX_PAGE = 20;
+    private static final int MAX_PAGE = 50;
 
     private final String FONT_TYPE = "Serif";//Serif, SansSerif, Monospaced, Dialog, and DialogInput.
 
