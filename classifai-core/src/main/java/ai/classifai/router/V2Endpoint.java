@@ -16,7 +16,7 @@
 package ai.classifai.router;
 
 import ai.classifai.action.ActionConfig;
-import ai.classifai.action.LabelListImport;
+import ai.classifai.action.source.LabelListImport;
 import ai.classifai.action.ProjectExport;
 import ai.classifai.database.annotation.AnnotationQuery;
 import ai.classifai.database.portfolio.PortfolioDbQuery;
@@ -171,11 +171,15 @@ public class V2Endpoint extends EndpointBase {
 
                 if(projectStatus.equals(NewProjectStatus.CONFIG.name()))
                 {
-                    createConfigProject(context);
+                    importConfigProject(context);
                 }
                 else if(projectStatus.equals(NewProjectStatus.RAW.name()))
                 {
                     createRawProject(requestBody, context);
+                }
+                else if(projectStatus.equals(NewProjectStatus.YOLO.name()))
+                {
+                    importYOLOProject(requestBody, context);
                 }
                 else
                 {
@@ -193,7 +197,14 @@ public class V2Endpoint extends EndpointBase {
         });
     }
 
-    protected void createConfigProject(RoutingContext context)
+    protected void importYOLOProject(JsonObject requestBody, RoutingContext context)
+    {
+        //TODO:
+
+        HTTPResponseHandler.configureOK(context);
+    }
+
+    protected void importConfigProject(RoutingContext context)
     {
         if(projectImporter.isWindowOpen())
         {

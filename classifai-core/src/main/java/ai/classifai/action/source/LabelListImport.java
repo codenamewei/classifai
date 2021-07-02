@@ -13,7 +13,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package ai.classifai.action;
+package ai.classifai.action.source;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

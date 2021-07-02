@@ -13,8 +13,9 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package ai.classifai.action;
+package ai.classifai.action.source;
 
+import ai.classifai.action.ActionConfig;
 import ai.classifai.database.portfolio.PortfolioVerticle;
 import ai.classifai.util.ParamConfig;
 import io.vertx.core.json.JsonObject;
@@ -36,7 +37,7 @@ import java.util.List;
  */
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class ProjectImport
+public class ConfigImport
 {
     public static boolean importProjectFile(@NonNull File jsonFile)
     {
