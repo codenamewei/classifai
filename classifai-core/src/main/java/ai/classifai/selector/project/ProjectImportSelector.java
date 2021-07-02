@@ -16,7 +16,7 @@
 package ai.classifai.selector.project;
 
 import ai.classifai.action.ActionConfig;
-import ai.classifai.action.ProjectImport;
+import ai.classifai.action.source.ConfigImport;
 import ai.classifai.selector.status.FileSystemStatus;
 import ai.classifai.selector.status.SelectionWindowStatus;
 import ai.classifai.ui.SelectionWindow;
@@ -110,7 +110,7 @@ public class ProjectImportSelector extends SelectionWindow {
 
         log.info("Proceed with importing project with " + jsonFile.getName());
 
-        if(!ProjectImport.importProjectFile(jsonFile))
+        if(!ConfigImport.importProjectFile(jsonFile))
         {
             String mes = "Import project failed.";
             log.debug(mes);

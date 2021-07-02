@@ -135,6 +135,21 @@ public class FileHandler
         return fileName;
     }
 
+    public static String getFileNameWithoutExt(File file) {
+        String fileName = "";
+        try {
+            if (file != null && file.exists()) {
+                String name = file.getName();
+                fileName = name.replaceFirst("[.][^.]+$", "");
+            }
+        } catch (Exception e) {
+            log.debug("Retrieved file name without extension failed: ", e);
+            fileName = "";
+        }
+
+        return fileName;
+    }
+
     private static void delete(File file)
     {
         try

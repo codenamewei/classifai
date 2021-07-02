@@ -18,9 +18,12 @@ package ai.classifai.router;
 import ai.classifai.action.ActionConfig;
 import ai.classifai.action.source.LabelListImport;
 import ai.classifai.action.ProjectExport;
+import ai.classifai.action.source.annotation.image.yolo.YoloProj;
+import ai.classifai.action.source.annotation.image.yolo.YoloProjImport;
 import ai.classifai.database.annotation.AnnotationQuery;
 import ai.classifai.database.portfolio.PortfolioDbQuery;
 import ai.classifai.database.versioning.ProjectVersion;
+import ai.classifai.loader.NameGenerator;
 import ai.classifai.loader.ProjectLoader;
 import ai.classifai.loader.ProjectLoaderStatus;
 import ai.classifai.selector.project.LabelFileSelector;
@@ -199,7 +202,31 @@ public class V2Endpoint extends EndpointBase {
 
     protected void importYOLOProject(JsonObject requestBody, RoutingContext context)
     {
-        //TODO:
+        File labelFile = new File(requestBody.getString(ParamConfig.getLabelPathParam()));
+        File projFile = new File(requestBody.getString(ParamConfig.getProjectPathParam()));
+
+        String projName = null;
+
+        if(requestBody.containsKey(ParamConfig.getProjectNameParam()))
+        {
+            projName = requestBody.getString(ParamConfig.getProjectNameParam());
+        }
+
+        if((projName == null) || (!ProjectHandler.isProjectNameUnique(projName, AnnotationType.BOUNDINGBOX.ordinal())))
+        {
+            projName = new NameGenerator().getNewProjectName();
+        }
+
+        // TODO: check if path exist
+
+        YoloProj yoloProject =
+                YoloProj.builder()
+                .projectPath(projFile)
+                .labelFilePath(labelFile)
+                .projectName(projName)
+                .build();
+
+        new YoloProjImport().importYoloProj(yoloProject);
 
         HTTPResponseHandler.configureOK(context);
     }
