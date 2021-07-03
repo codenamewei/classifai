@@ -15,8 +15,8 @@
  */
 package ai.classifai.action.source.annotation.image.yolo;
 
-import ai.classifai.action.source.LabelListImport;
 import ai.classifai.database.versioning.ProjectVersion;
+import ai.classifai.loader.NameGenerator;
 import ai.classifai.loader.ProjectLoader;
 import ai.classifai.loader.ProjectLoaderStatus;
 import ai.classifai.selector.status.FileSystemStatus;
@@ -26,6 +26,9 @@ import ai.classifai.util.data.ImageHandler;
 import ai.classifai.util.project.ProjectHandler;
 import ai.classifai.util.project.ProjectInfra;
 import ai.classifai.util.type.AnnotationType;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 
@@ -33,84 +36,155 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+@Builder
+@Getter
+class YoloProj
+{
+    private String projectName;
+    private Path yoloLabelPath;
+    private List<String> labelMap;
+    private Path yoloImagePath;
+
+    @Builder.Default List<YoloFormat> yoloLabels = new ArrayList<>();
+}
+
 @Slf4j
+@NoArgsConstructor
 public class YoloProjImport
 {
+    private YoloProj yoloProj = null;
+
     private static final String LABEL_EXT = ".txt";
-    private static final String IMG_FOLDER = "images";
-    private static final String LABEL_FOLDER = "labels";
 
-    public void importYoloProj(YoloProj yoloProj)
+    public boolean init(String projName, String strImgFolder, String labelTxtFile, String yoloLabelFolder)
     {
-        File projFolder = yoloProj.getProjectPath();
+        Path yoloImagePath = Paths.get(strImgFolder);
 
-        File imageFile = Paths.get(projFolder.toString(), IMG_FOLDER).toFile();
-        File labelTxtFile = Paths.get(projFolder.toString(), LABEL_FOLDER).toFile();
-
-        if(imageFile.exists() && labelTxtFile.exists())
+        if(!yoloImagePath.toFile().exists())
         {
-            //create project
-            loadProject(yoloProj);
+            yoloImagePath = null;
+            log.info("YOLO Image Path not exist: " + strImgFolder);
+            return false;
+        }
 
+        Path yoloLabelPath = yoloLabelFolder == null ? null : Paths.get(yoloLabelFolder);
+
+        if((yoloLabelPath != null) && (!yoloLabelPath.toFile().exists()))
+        {
+            Path defaultYoloLabelPath = Paths.get(strImgFolder.replace("images", "labels"));
+
+            yoloLabelPath = defaultYoloLabelPath.toFile().exists() ? defaultYoloLabelPath : null;
+
+            if (yoloLabelPath == null) {
+                log.info("YOLO Label Path not exist: " + defaultYoloLabelPath.toString());
+                return false;
+            }
+        }
+
+        if((projName == null) || (!ProjectHandler.isProjectNameUnique(projName, AnnotationType.BOUNDINGBOX.ordinal())))
+        {
+            projName = new NameGenerator().getNewProjectName();
+        }
+
+        List<String> labelDict = loadLabelTxtFile(new File(labelTxtFile));
+
+        if((yoloImagePath != null) && (yoloLabelPath != null) && (labelDict != null))
+        {
+            yoloProj = YoloProj.builder()
+                    .projectName(projName)
+                    .yoloImagePath(yoloImagePath)
+                    .yoloLabelPath(yoloLabelPath)
+                    .labelMap(labelDict)
+                    .build();
+
+            ProjectLoader loader = ProjectLoader.builder()
+                    .projectId(UuidGenerator.generateUuid())
+                    .projectName(yoloProj.getProjectName())
+                    .annotationType(AnnotationType.BOUNDINGBOX.ordinal())
+                    .projectPath(yoloProj.getYoloImagePath().toFile())
+                    //TODO: remove these
+                    .isProjectNew(true)
+                    .isProjectStarred(false)
+                    .projectVersion(new ProjectVersion())
+                    //TODO: -------------
+                    .labelList(yoloProj.getLabelMap())
+                    .projectLoaderStatus(ProjectLoaderStatus.LOADED)
+                    .projectInfra(ProjectInfra.ON_PREMISE)
+                    .fileSystemStatus(FileSystemStatus.ITERATING_FOLDER)
+                    .build();
+
+            ProjectHandler.loadProjectLoader(loader);
+
+            return true;
         }
         else
         {
-            //TODO: FAIL
+
+            System.out.println((yoloImagePath != null) ? "(yoloImagePath != null)" : "(yoloImagePath == null)");
+            System.out.println((yoloLabelPath != null) ? "(yoloLabelPath != null)" : "(yoloLabelPath == null)");
+            System.out.println((labelDict != null) ? "(labelDict != null)" : "(labelDict == null)");
+
+            log.info("YoloProject failed to initiate");
+            return false;
         }
     }
 
-    private void loadProject(YoloProj yoloProj)
+    private List<String> loadLabelTxtFile(File labelTxtFile)
     {
-        LabelListImport labelImport = new LabelListImport(yoloProj.getLabelFilePath());
+        if(labelTxtFile == null) return null;
 
-        ProjectLoader loader = ProjectLoader.builder()
-                .projectId(UuidGenerator.generateUuid())
-                .projectName(yoloProj.getProjectName())
-                .annotationType(AnnotationType.BOUNDINGBOX.ordinal())
-                .projectPath(yoloProj.getProjectPath())
-                //TODO: remove these
-                .isProjectNew(true)
-                .isProjectStarred(false)
-                .projectVersion(new ProjectVersion())
-                //TODO: -------------
-                .labelList(labelImport.getValidLabelList())
-                .projectLoaderStatus(ProjectLoaderStatus.LOADED)
-                .projectInfra(ProjectInfra.ON_PREMISE)
-                .fileSystemStatus(FileSystemStatus.ITERATING_FOLDER)
-                .build();
+        List<String> labelRefDict = null;
 
-        ProjectHandler.loadProjectLoader(loader);
+        try
+        {
+            String labels = IOUtils.toString(new java.io.FileReader(labelTxtFile));
 
-        YoloLabelParser yoloLabelParser = new YoloLabelParser(yoloProj.getLabelFilePath());
+            labelRefDict = Arrays.asList(labels.split("\n"));
+        }
+        catch(Exception e)
+        {
+            log.debug("Error in loading label: ", e);
+        }
 
-        //iterate image folder
-        List<String> imgStrList = FileHandler.processFolder(yoloProj.getProjectPath(), ImageHandler::isImageFileValid);
+        return labelRefDict;
+    }
 
-        int numLabels = yoloLabelParser.getLabelRefDict().size();
+    public void load()
+    {
+        List<String> imgStrList = ImageHandler.getValidImagesFromFolder(yoloProj.getYoloImagePath().toFile());
+
         for(String imgStr : imgStrList)
         {
+            System.out.println("Img: " + imgStr);
+
             Path targetPathImg = Paths.get(imgStr);
 
             String fileName = FileHandler.getFileNameWithoutExt(targetPathImg.toFile());
 
-            Path targetPathLabel = Paths.get(yoloProj.getProjectPath().toString(), LABEL_FOLDER, fileName +  LABEL_EXT);
+            Path labelFile = Paths.get(yoloProj.getYoloLabelPath().toString(), fileName + LABEL_EXT);
+
+            System.out.println("Txt: " + labelFile.toString());
 
             try
             {
-                String labels = IOUtils.toString(new FileReader(targetPathLabel.toFile()));
+                String labels = IOUtils.toString(new FileReader(labelFile.toFile()));
 
                 List<String> inputLabelLine = Arrays.asList(labels.split("\n"));
 
-                yoloLabelParser.getYoloContent().add(new YoloFormat(inputLabelLine, numLabels));
+                YoloFormat yoloFormat = new YoloFormat(inputLabelLine, yoloProj.getLabelMap().size());
+
+                //yoloProj.getYoloLabels().add(yoloFormat);
+
+                //TODO: write to annotation
             }
             catch(Exception e)
             {
-                log.info("Label file not found: ", e);
+                log.info("Error when loading label file: ", labelFile.toString());
             }
-
         }
     }
 }

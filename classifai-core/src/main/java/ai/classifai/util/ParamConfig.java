@@ -141,4 +141,7 @@ public class ParamConfig
     //cloud
     @Getter private static final String isCloudParam = "is_cloud";
     @Getter private static final String projectInfraParam = "project_infra";
+
+    //yolo
+    @Getter private static final String yoloLabelPath = "yolo_label_path";
 }

@@ -18,12 +18,10 @@ package ai.classifai.router;
 import ai.classifai.action.ActionConfig;
 import ai.classifai.action.source.LabelListImport;
 import ai.classifai.action.ProjectExport;
-import ai.classifai.action.source.annotation.image.yolo.YoloProj;
 import ai.classifai.action.source.annotation.image.yolo.YoloProjImport;
 import ai.classifai.database.annotation.AnnotationQuery;
 import ai.classifai.database.portfolio.PortfolioDbQuery;
 import ai.classifai.database.versioning.ProjectVersion;
-import ai.classifai.loader.NameGenerator;
 import ai.classifai.loader.ProjectLoader;
 import ai.classifai.loader.ProjectLoaderStatus;
 import ai.classifai.selector.project.LabelFileSelector;
@@ -182,7 +180,7 @@ public class V2Endpoint extends EndpointBase {
                 }
                 else if(projectStatus.equals(NewProjectStatus.YOLO.name()))
                 {
-                    importYOLOProject(requestBody, context);
+                    importYoloProject(requestBody, context);
                 }
                 else
                 {
@@ -193,42 +191,44 @@ public class V2Endpoint extends EndpointBase {
             }
             catch(Exception e)
             {
-                String errorMessage = "Parameter of status with " + NewProjectStatus.getParamList() + " is compulsory in request body";
+                e.printStackTrace();
+                String errorMessage = "Parameter of status with " + NewProjectStatus.getParamList() + " is compulsory in request body: ";
                 HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError(errorMessage));
 
             }
         });
     }
 
-    protected void importYOLOProject(JsonObject requestBody, RoutingContext context)
+    protected void importYoloProject(JsonObject requestBody, RoutingContext context)
     {
-        File labelFile = new File(requestBody.getString(ParamConfig.getLabelPathParam()));
-        File projFile = new File(requestBody.getString(ParamConfig.getProjectPathParam()));
+        String labelTxtFile = requestBody.getString(ParamConfig.getLabelPathParam());
+        String yoloImageFolder = requestBody.getString(ParamConfig.getProjectPathParam());
 
         String projName = null;
+        String yoloLabelPath = null;
 
         if(requestBody.containsKey(ParamConfig.getProjectNameParam()))
         {
             projName = requestBody.getString(ParamConfig.getProjectNameParam());
         }
 
-        if((projName == null) || (!ProjectHandler.isProjectNameUnique(projName, AnnotationType.BOUNDINGBOX.ordinal())))
+        if(requestBody.containsKey(ParamConfig.getYoloLabelPath()))
         {
-            projName = new NameGenerator().getNewProjectName();
+            yoloLabelPath = requestBody.getString(ParamConfig.getYoloLabelPath());
         }
 
-        // TODO: check if path exist
+        YoloProjImport projImport = new YoloProjImport();
 
-        YoloProj yoloProject =
-                YoloProj.builder()
-                .projectPath(projFile)
-                .labelFilePath(labelFile)
-                .projectName(projName)
-                .build();
+        if(projImport.init(projName, yoloImageFolder, labelTxtFile, yoloLabelPath))
+        {
+            HTTPResponseHandler.configureOK(context);
 
-        new YoloProjImport().importYoloProj(yoloProject);
-
-        HTTPResponseHandler.configureOK(context);
+            projImport.load();
+        }
+        else
+        {
+            HTTPResponseHandler.configureOK(context, ReplyHandler.reportUserDefinedError("Import Yolo project failed with invalid input"));
+        }
     }
 
     protected void importConfigProject(RoutingContext context)
