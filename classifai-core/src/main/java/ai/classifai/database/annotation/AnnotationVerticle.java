@@ -273,11 +273,6 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
     {
         Path dataPath = Paths.get(loader.getProjectPath().getAbsolutePath(), dataSubPath);
 
-        if(!dataPath.toFile().exists())
-        {
-            System.out.println(dataPath.toString() + " doesnt exist");
-        }
-
         String uuid = UuidGenerator.generateUuid();
 
         Annotation annotation = Annotation.builder()

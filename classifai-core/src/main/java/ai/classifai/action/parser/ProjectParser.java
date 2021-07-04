@@ -163,7 +163,7 @@ public class ProjectParser
                 for(String versionUuid : versionUuidList)
                 {
                     //decode txt file into AnnotationVersion
-                    annotationDict.put(versionUuid, new AnnotationVersion(yoloFormat, loader.getProjectId()));
+                    annotationDict.put(versionUuid, new AnnotationVersion(yoloFormat));
                 }
             }
             else

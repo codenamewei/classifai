@@ -26,6 +26,8 @@ import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+
 /**
  * Unit for annotation versionings
  */
@@ -36,7 +38,6 @@ import lombok.extern.slf4j.Slf4j;
 public class AnnotationVersion
 {
     JsonArray annotation = new JsonArray();
-
     Integer imgX = 0;
     Integer imgY = 0;
     Integer imgW = 0;
@@ -56,26 +57,40 @@ public class AnnotationVersion
         imgH = jsonAnnotationVersion.getInteger(ParamConfig.getImgHParam());
     }
 
-    public AnnotationVersion(YoloFormat yoloFormat, String projectId)
+    public AnnotationVersion(YoloFormat yoloFormat)
     {
         System.out.println("TODO: YOLOFormat -> annotation version");
 
         imgW = yoloFormat.getImgWidth();
         imgH = yoloFormat.getImgHeight();
 
-        System.out.println("Depth: " + yoloFormat.getImgDepth());
+        buildYoloAnnotation(yoloFormat);
+    }
 
-        Annotation annotation = Annotation.builder()
-                .uuid(UuidGenerator.generateUuid())         //uuid
-                .projectId(projectId)                       //project_id
-                .imgPath(yoloFormat.getImgPath().toString())//img_path
-                //FIXME: Fix annotationDict
-                //.annotationDict(null)                       //version_list
-                .imgDepth(yoloFormat.getImgDepth())         //img_depth
-                .imgOriW(imgW)                              //img_ori_w
-                .imgOriH(imgH)                              //img_ori_h
-                .fileSize(0)                                //file_size
-                .build();
+    public void buildYoloAnnotation(YoloFormat yoloFormat)
+    {
+        List<Integer[]> bboxList = yoloFormat.getBboxList();
+        List<String> labelNamelist = yoloFormat.getLabelNameList();
+
+        for(int i = 0; i < bboxList.size(); ++i)
+        {
+            Integer[] bbox = bboxList.get(i);
+
+            annotation.add(new JsonObject()
+                    .put("x1", bbox[0])
+                    .put("y1", bbox[1])
+                    .put("x2", bbox[2])
+                    .put("x3", bbox[3])
+                    .put("lineWidth", 1) //FIXME: dont hardcode
+                    .put("color", "rgba(255,255,0,0.8)") //FIXME: dont hardcode
+                    .put("distancetoImg", new JsonObject().put("x", 0).put("y", 0)) //DEFAULT 0
+                    .put("label", labelNamelist.get(i))
+                    .put("id", 123)); //FIXME: dont hardcode
+        }
+
+        System.out.println("Debugging Annotation JsonArray");
+
+        System.out.println(annotation);
     }
 
     public JsonObject getJsonObject()

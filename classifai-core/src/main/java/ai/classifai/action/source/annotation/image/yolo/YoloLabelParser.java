@@ -46,7 +46,7 @@ public class YoloLabelParser
 
             List<String> inputLabelLine = Arrays.asList(labels.split("\n"));
 
-            return new YoloFormat(inputLabelLine, targetPathImg, loader.getLabelList().size());
+            return new YoloFormat(inputLabelLine, loader.getLabelList(), targetPathImg, loader.getLabelList().size());
 
         }
         catch(Exception e)

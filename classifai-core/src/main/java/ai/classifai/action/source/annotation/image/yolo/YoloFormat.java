@@ -15,10 +15,10 @@ import java.util.List;
 @Slf4j
 public class YoloFormat
 {
-    @Getter
     private List<Integer> labelList = new ArrayList<>();
 
-    @Getter private List<Integer[]> bboxList = new ArrayList<>();
+    private List<Integer[]> bboxList = new ArrayList<>();
+    private List<String> labelNameList = new ArrayList<>();
 
     private int imgWidth;
     private int imgHeight;
@@ -30,7 +30,7 @@ public class YoloFormat
     private final int TOTAL_NUM_LABELS;
     private Path imgPath;
 
-    public YoloFormat(List<String> inputYoloLabels, Path inputImgPath, int totalLabels)
+    public YoloFormat(List<String> inputYoloLabels, List<String> labelRefList, Path inputImgPath, int totalLabels)
     {
         TOTAL_NUM_LABELS = totalLabels;
 
@@ -56,7 +56,7 @@ public class YoloFormat
         {
             String[] splittedLine = line.split(" ");
 
-            insertValidLabel(splittedLine);
+            insertValidLabel(splittedLine, labelRefList);
         });
     }
 
@@ -74,7 +74,7 @@ public class YoloFormat
         bboxList.add(bbox);
     }
 
-    private void insertValidLabel(String[] labelElement)
+    private void insertValidLabel(String[] labelElement, List<String> labelRefList)
     {
         if((labelElement.length >= LABEL_MIN_LENGTH)
                 && (labelElement.length < LABEL_MAX_LENGTH))
@@ -91,6 +91,7 @@ public class YoloFormat
                 if((labelIndex < TOTAL_NUM_LABELS) && inRange(x) && inRange(y) && inRange(width) && inRange(height))
                 {
                     labelList.add(labelIndex);
+                    labelNameList.add(labelRefList.get(labelIndex));
 
                     loadX1Y1X2Y2(x, y, width, height);
 
