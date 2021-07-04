@@ -49,6 +49,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
@@ -185,7 +186,7 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
                 .uuid(uuid)
                 .projectId(loader.getProjectId())
                 .imgPath(dataPath)
-                .annotationDict(ProjectParser.buildAnnotationDict(loader))
+                .annotationDict(ProjectParser.buildAnnotationDict(loader, dataPath))
                 .build();
 
         loader.getUuidAnnotationDict().put(uuid, annotation);
@@ -270,6 +271,12 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
 
     private static void writeUuidToDbFromReloadingRootPath(@NonNull ProjectLoader loader, @NonNull String dataSubPath)
     {
+        Path dataPath = Paths.get(loader.getProjectPath().getAbsolutePath(), dataSubPath);
+
+        if(!dataPath.toFile().exists())
+        {
+            System.out.println(dataPath.toString() + " doesnt exist");
+        }
 
         String uuid = UuidGenerator.generateUuid();
 
@@ -277,7 +284,7 @@ public abstract class AnnotationVerticle extends AbstractVerticle implements Ver
                 .uuid(uuid)
                 .projectId(loader.getProjectId())
                 .imgPath(dataSubPath)
-                .annotationDict(ProjectParser.buildAnnotationDict(loader))
+                .annotationDict(ProjectParser.buildAnnotationDict(loader, dataPath.toString()))
                 .build();
 
         //put annotation in ProjectLoader

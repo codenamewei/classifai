@@ -15,10 +15,13 @@
  */
 package ai.classifai.action.parser;
 
+import ai.classifai.action.source.annotation.image.yolo.YoloFormat;
+import ai.classifai.action.source.annotation.image.yolo.YoloLabelParser;
 import ai.classifai.database.annotation.AnnotationVerticle;
 import ai.classifai.database.versioning.Annotation;
 import ai.classifai.database.versioning.AnnotationVersion;
 import ai.classifai.loader.ProjectLoader;
+import ai.classifai.selector.status.NewProjectStatus;
 import ai.classifai.util.Hash;
 import ai.classifai.util.ParamConfig;
 import ai.classifai.util.data.StringHandler;
@@ -33,10 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /***
  * Parsing Project Table in and out classifai with configuration file
@@ -147,17 +147,42 @@ public class ProjectParser
     }
 
     //build empty annotationDict
-    public static Map<String, AnnotationVersion> buildAnnotationDict(@NonNull ProjectLoader loader)
+    public static Map<String, AnnotationVersion> buildAnnotationDict(@NonNull ProjectLoader loader, @NonNull String dataFileName)
     {
         Map<String, AnnotationVersion> annotationDict = new HashMap<>();
 
         Set<String> versionUuidList = loader.getProjectVersion().getVersionUuidDict().keySet();
 
-        for(String versionUuid : versionUuidList)
+        //yolo
+        if(loader.getNewProjectStatus().equals(NewProjectStatus.YOLO))
         {
-            annotationDict.put(versionUuid, new AnnotationVersion());
-        }
+            YoloFormat yoloFormat = new YoloLabelParser().run(loader, dataFileName);
 
+            if(yoloFormat != null)
+            {
+                for(String versionUuid : versionUuidList)
+                {
+                    //decode txt file into AnnotationVersion
+                    annotationDict.put(versionUuid, new AnnotationVersion(yoloFormat, loader.getProjectId()));
+                }
+            }
+            else
+            {
+                for(String versionUuid : versionUuidList)
+                {
+                    //decode txt file into AnnotationVersion
+                    annotationDict.put(versionUuid, new AnnotationVersion());
+                }
+            }
+
+        }
+        else
+        {
+            for(String versionUuid : versionUuidList)
+            {
+                annotationDict.put(versionUuid, new AnnotationVersion());
+            }
+        }
         return annotationDict;
     }
 

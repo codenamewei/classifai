@@ -1,28 +1,54 @@
 package ai.classifai.action.source.annotation.image.yolo;
 
+import ai.classifai.data.type.image.ImageData;
+import ai.classifai.data.type.image.ImageDataFactory;
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.metadata.Metadata;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 @Slf4j
-class YoloFormat
+public class YoloFormat
 {
     @Getter
     private List<Integer> labelList = new ArrayList<>();
 
-    //x, y, w, h
-    @Getter private List<Double[]> bboxList = new ArrayList<>();
+    @Getter private List<Integer[]> bboxList = new ArrayList<>();
+
+    private int imgWidth;
+    private int imgHeight;
 
     private static final int LABEL_MIN_LENGTH = 5;
     private static final int LABEL_MAX_LENGTH = 7;
 
     private final int TOTAL_NUM_LABELS;
+    private Path imgPath;
 
-    public YoloFormat(List<String> inputYoloLabels, int totalLabels)
+    public YoloFormat(List<String> inputYoloLabels, Path imgPath, int totalLabels)
     {
         TOTAL_NUM_LABELS = totalLabels;
+
+        imgPath = imgPath;
+
+        try
+        {
+            Metadata metadata = ImageMetadataReader.readMetadata(imgPath.toFile());
+
+            ImageData imgData = new ImageDataFactory().getImageData(metadata);
+
+            imgWidth = imgData.getWidth();
+            imgHeight = imgData.getHeight();
+
+        }
+        catch(Exception e)
+        {
+            log.info("Error in reading image " + imgPath.toAbsolutePath() + ": ", e);
+        }
 
         inputYoloLabels.forEach((line) ->
         {
@@ -30,6 +56,20 @@ class YoloFormat
 
             insertValidLabel(splittedLine);
         });
+    }
+
+    //x, y, w, h -> x1, y1, x2, y2
+    private void loadX1Y1X2Y2(double x, double y, double width, double height)
+    {
+        double x1 = x * imgWidth;
+        double y1 = y * imgHeight;
+
+        double x2 = x1 + width * imgWidth;
+        double y2 = y1 + height * imgHeight;
+
+        Integer[] bbox = {(int) x1, (int) y1, (int) x2, (int) y2};
+
+        bboxList.add(bbox);
     }
 
     private void insertValidLabel(String[] labelElement)
@@ -50,7 +90,7 @@ class YoloFormat
                 {
                     labelList.add(labelIndex);
 
-                    Double[] bbox = {x, y, width, height};
+                    loadX1Y1X2Y2(x, y, width, height);
 
 //                    System.out.println("Labels: " + labelIndex);
 //
@@ -59,8 +99,6 @@ class YoloFormat
 //
 //                    System.out.println("w: " + width);
 //                    System.out.println("h: " + height);
-
-                    bboxList.add(bbox);
                 }
                 else
                 {

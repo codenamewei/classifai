@@ -222,8 +222,6 @@ public class V2Endpoint extends EndpointBase {
         if(projImport.init(projName, yoloImageFolder, labelTxtFile, yoloLabelPath))
         {
             HTTPResponseHandler.configureOK(context);
-
-            projImport.load();
         }
         else
         {

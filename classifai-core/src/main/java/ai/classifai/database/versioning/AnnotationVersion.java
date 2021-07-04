@@ -15,7 +15,9 @@
  */
 package ai.classifai.database.versioning;
 
+import ai.classifai.action.source.annotation.image.yolo.YoloFormat;
 import ai.classifai.util.ParamConfig;
+import ai.classifai.util.collection.UuidGenerator;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import lombok.Getter;
@@ -52,6 +54,25 @@ public class AnnotationVersion
         imgY = jsonAnnotationVersion.getInteger(ParamConfig.getImgYParam());
         imgW = jsonAnnotationVersion.getInteger(ParamConfig.getImgWParam());
         imgH = jsonAnnotationVersion.getInteger(ParamConfig.getImgHParam());
+    }
+
+    public AnnotationVersion(YoloFormat yoloFormat, String projectId)
+    {
+        System.out.println("TODO: YOLOFormat -> annotation version");
+
+        imgW = yoloFormat.getImgWidth();
+        imgH = yoloFormat.getImgHeight();
+
+        Annotation annotation = Annotation.builder()
+                .uuid(UuidGenerator.generateUuid())         //uuid
+                .projectId(projectId)                       //project_id
+                .imgPath(yoloFormat.getImgPath().toString())//img_path
+                .annotationDict(annotationDict)             //version_list
+                .imgDepth(row.getInteger(3))                //img_depth
+                .imgOriW(imgW)                              //img_ori_w
+                .imgOriH(imgH)                              //img_ori_h
+                .fileSize(0)                                //file_size
+                .build();
     }
 
     public JsonObject getJsonObject()

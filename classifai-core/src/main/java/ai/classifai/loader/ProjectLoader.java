@@ -19,6 +19,7 @@ import ai.classifai.database.portfolio.PortfolioVerticle;
 import ai.classifai.database.versioning.Annotation;
 import ai.classifai.database.versioning.ProjectVersion;
 import ai.classifai.selector.status.FileSystemStatus;
+import ai.classifai.selector.status.NewProjectStatus;
 import ai.classifai.util.data.ImageHandler;
 import ai.classifai.util.project.ProjectInfra;
 import ai.classifai.wasabis3.WasabiProject;
@@ -61,6 +62,9 @@ public class ProjectLoader
     private ProjectLoaderStatus projectLoaderStatus;
 
     private ProjectVersion projectVersion;
+
+    @Builder.Default private NewProjectStatus newProjectStatus = NewProjectStatus.RAW;
+    @Builder.Default private File yoloLabelPath = null;
 
     @Builder.Default private WasabiProject wasabiProject = null;
 

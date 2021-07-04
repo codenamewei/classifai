@@ -20,14 +20,11 @@ import ai.classifai.loader.NameGenerator;
 import ai.classifai.loader.ProjectLoader;
 import ai.classifai.loader.ProjectLoaderStatus;
 import ai.classifai.selector.status.FileSystemStatus;
+import ai.classifai.selector.status.NewProjectStatus;
 import ai.classifai.util.collection.UuidGenerator;
-import ai.classifai.util.data.FileHandler;
-import ai.classifai.util.data.ImageHandler;
 import ai.classifai.util.project.ProjectHandler;
 import ai.classifai.util.project.ProjectInfra;
 import ai.classifai.util.type.AnnotationType;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
@@ -35,31 +32,14 @@ import org.apache.commons.io.IOUtils;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.io.FileReader;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@Builder
-@Getter
-class YoloProj
-{
-    private String projectName;
-    private Path yoloLabelPath;
-    private List<String> labelMap;
-    private Path yoloImagePath;
-
-    @Builder.Default List<YoloFormat> yoloLabels = new ArrayList<>();
-}
 
 @Slf4j
 @NoArgsConstructor
 public class YoloProjImport
 {
-    private YoloProj yoloProj = null;
-
-    private static final String LABEL_EXT = ".txt";
-
     public boolean init(String projName, String strImgFolder, String labelTxtFile, String yoloLabelFolder)
     {
         Path yoloImagePath = Paths.get(strImgFolder);
@@ -94,30 +74,27 @@ public class YoloProjImport
 
         if((yoloImagePath != null) && (yoloLabelPath != null) && (labelDict != null))
         {
-            yoloProj = YoloProj.builder()
-                    .projectName(projName)
-                    .yoloImagePath(yoloImagePath)
-                    .yoloLabelPath(yoloLabelPath)
-                    .labelMap(labelDict)
-                    .build();
-
             ProjectLoader loader = ProjectLoader.builder()
                     .projectId(UuidGenerator.generateUuid())
-                    .projectName(yoloProj.getProjectName())
+                    .projectName(projName)
                     .annotationType(AnnotationType.BOUNDINGBOX.ordinal())
-                    .projectPath(yoloProj.getYoloImagePath().toFile())
+                    .projectPath(yoloImagePath.toFile())
                     //TODO: remove these
                     .isProjectNew(true)
                     .isProjectStarred(false)
                     .projectVersion(new ProjectVersion())
                     //TODO: -------------
-                    .labelList(yoloProj.getLabelMap())
+                    .newProjectStatus(NewProjectStatus.YOLO)
+                    .yoloLabelPath(yoloLabelPath.toFile())
+                    .labelList(labelDict)
                     .projectLoaderStatus(ProjectLoaderStatus.LOADED)
                     .projectInfra(ProjectInfra.ON_PREMISE)
                     .fileSystemStatus(FileSystemStatus.ITERATING_FOLDER)
                     .build();
 
             ProjectHandler.loadProjectLoader(loader);
+
+            loader.initFolderIteration();
 
             return true;
         }
@@ -153,38 +130,38 @@ public class YoloProjImport
         return labelRefDict;
     }
 
-    public void load()
-    {
-        List<String> imgStrList = ImageHandler.getValidImagesFromFolder(yoloProj.getYoloImagePath().toFile());
-
-        for(String imgStr : imgStrList)
-        {
-            System.out.println("Img: " + imgStr);
-
-            Path targetPathImg = Paths.get(imgStr);
-
-            String fileName = FileHandler.getFileNameWithoutExt(targetPathImg.toFile());
-
-            Path labelFile = Paths.get(yoloProj.getYoloLabelPath().toString(), fileName + LABEL_EXT);
-
-            System.out.println("Txt: " + labelFile.toString());
-
-            try
-            {
-                String labels = IOUtils.toString(new FileReader(labelFile.toFile()));
-
-                List<String> inputLabelLine = Arrays.asList(labels.split("\n"));
-
-                YoloFormat yoloFormat = new YoloFormat(inputLabelLine, yoloProj.getLabelMap().size());
-
-                //yoloProj.getYoloLabels().add(yoloFormat);
-
-                //TODO: write to annotation
-            }
-            catch(Exception e)
-            {
-                log.info("Error when loading label file: ", labelFile.toString());
-            }
-        }
-    }
+//    public void load()
+//    {
+//        List<String> imgStrList = ImageHandler.getValidImagesFromFolder(yoloProj.getYoloImagePath().toFile());
+//
+//        for(String imgStr : imgStrList)
+//        {
+//            System.out.println("Img: " + imgStr);
+//
+//            Path targetPathImg = Paths.get(imgStr);
+//
+//            String fileName = FileHandler.getFileNameWithoutExt(targetPathImg.toFile());
+//
+//            Path labelFile = Paths.get(yoloProj.getYoloLabelPath().toString(), fileName + LABEL_EXT);
+//
+//            System.out.println("Txt: " + labelFile.toString());
+//
+//            try
+//            {
+//                String labels = IOUtils.toString(new FileReader(labelFile.toFile()));
+//
+//                List<String> inputLabelLine = Arrays.asList(labels.split("\n"));
+//
+//                YoloFormat yoloFormat = new YoloFormat(inputLabelLine, yoloProj.getLabelMap().size());
+//
+//                //yoloProj.getYoloLabels().add(yoloFormat);
+//
+//                //TODO: write to annotation
+//            }
+//            catch(Exception e)
+//            {
+//                log.info("Error when loading label file: ", labelFile.toString());
+//            }
+//        }
+//    }
 }
