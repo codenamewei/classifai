@@ -17,6 +17,7 @@ package ai.classifai.data.type.image;
 
 import com.drew.metadata.Metadata;
 import com.drew.metadata.MetadataException;
+import com.drew.metadata.bmp.BmpHeaderDirectory;
 import com.drew.metadata.jpeg.JpegDirectory;
 
 /**
@@ -39,5 +40,12 @@ public class JpegImageData extends ImageData
     @Override
     public int getHeight() throws MetadataException {
         return metadata.getFirstDirectoryOfType(JpegDirectory.class).getInt(JpegDirectory.TAG_IMAGE_HEIGHT);
+    }
+
+    @Override
+    public int getDepth() throws MetadataException
+    {
+        int component = metadata.getFirstDirectoryOfType(JpegDirectory.class).getInt(JpegDirectory.TAG_NUMBER_OF_COMPONENTS);
+        return (component == 1) ? 1 : 3;
     }
 }

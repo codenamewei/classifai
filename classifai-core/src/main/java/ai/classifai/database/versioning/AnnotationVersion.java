@@ -63,12 +63,15 @@ public class AnnotationVersion
         imgW = yoloFormat.getImgWidth();
         imgH = yoloFormat.getImgHeight();
 
+        System.out.println("Depth: " + yoloFormat.getImgDepth());
+
         Annotation annotation = Annotation.builder()
                 .uuid(UuidGenerator.generateUuid())         //uuid
                 .projectId(projectId)                       //project_id
                 .imgPath(yoloFormat.getImgPath().toString())//img_path
-                .annotationDict(annotationDict)             //version_list
-                .imgDepth(row.getInteger(3))                //img_depth
+                //FIXME: Fix annotationDict
+                //.annotationDict(null)                       //version_list
+                .imgDepth(yoloFormat.getImgDepth())         //img_depth
                 .imgOriW(imgW)                              //img_ori_w
                 .imgOriH(imgH)                              //img_ori_h
                 .fileSize(0)                                //file_size

@@ -42,4 +42,11 @@ public class PngImageData extends ImageData
     {
         return metadata.getFirstDirectoryOfType(PngDirectory.class).getInt(PngDirectory.TAG_IMAGE_HEIGHT);
     }
+
+    @Override
+    public int getDepth() throws MetadataException
+    {
+        int component = metadata.getFirstDirectoryOfType(PngDirectory.class).getInt(PngDirectory.TAG_COLOR_TYPE);
+        return ((component == 0) || (component == 4)) ? 1 : 3;
+    }
 }

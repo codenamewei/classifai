@@ -22,6 +22,7 @@ public class YoloFormat
 
     private int imgWidth;
     private int imgHeight;
+    private int imgDepth;
 
     private static final int LABEL_MIN_LENGTH = 5;
     private static final int LABEL_MAX_LENGTH = 7;
@@ -29,11 +30,11 @@ public class YoloFormat
     private final int TOTAL_NUM_LABELS;
     private Path imgPath;
 
-    public YoloFormat(List<String> inputYoloLabels, Path imgPath, int totalLabels)
+    public YoloFormat(List<String> inputYoloLabels, Path inputImgPath, int totalLabels)
     {
         TOTAL_NUM_LABELS = totalLabels;
 
-        imgPath = imgPath;
+        imgPath = inputImgPath;
 
         try
         {
@@ -43,6 +44,7 @@ public class YoloFormat
 
             imgWidth = imgData.getWidth();
             imgHeight = imgData.getHeight();
+            imgDepth = imgData.getDepth();
 
         }
         catch(Exception e)

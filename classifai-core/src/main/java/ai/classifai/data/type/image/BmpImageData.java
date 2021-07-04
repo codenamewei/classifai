@@ -18,6 +18,7 @@ package ai.classifai.data.type.image;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.MetadataException;
 import com.drew.metadata.bmp.BmpHeaderDirectory;
+import com.drew.metadata.jpeg.JpegDirectory;
 
 /**
  * Provides metadata of bmp images
@@ -41,5 +42,12 @@ public class BmpImageData extends ImageData
     public int getHeight() throws MetadataException
     {
         return metadata.getFirstDirectoryOfType(BmpHeaderDirectory.class).getInt(BmpHeaderDirectory.TAG_IMAGE_HEIGHT);
+    }
+
+    @Override
+    public int getDepth() throws MetadataException
+    {
+        //TODO: Pending implement
+        return -1;
     }
 }

@@ -34,4 +34,5 @@ public abstract class ImageData
 
     public abstract int getWidth() throws MetadataException;
     public abstract int getHeight() throws MetadataException;
+    public abstract int getDepth() throws MetadataException;
 }
